@@ -24,9 +24,6 @@
     </section>
 
     <nav class="topright">
-      <button class="icon glass" id="board-btn" data-i18n-aria="aria.board">
-        <svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 01-8 0V4z"/><path d="M8 6H5v1a3 3 0 003 3M16 6h3v1a3 3 0 01-3 3"/><path d="M12 13v4M8.5 20h7M10 17h4"/></svg>
-      </button>
       <button class="icon glass" id="share" data-i18n-aria="aria.share">
         <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/></svg>
       </button>
@@ -80,6 +77,9 @@
 
     <div class="bar">
       <button id="join-btn" class="primary" data-i18n="join"></button>
+      <button id="view-btn" class="icon glass" data-i18n-aria="aria.view" aria-pressed="false" hidden>
+        <svg viewBox="0 0 24 24"><path d="M3 8h4l2-2.5h6L17 8h4v11H3z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+      </button>
       <button id="add" class="ghost" data-i18n="hang"></button>
     </div>
     <p class="hint" data-i18n="hint"></p>

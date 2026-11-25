@@ -239,7 +239,6 @@ export function initUI(ctx) {
   }
   const openBoard = () => openModal('lb.title', renderBoard);
   $('menu-board').addEventListener('click', openBoard);
-  $('board-btn').addEventListener('click', openBoard);
 
   /* ---------- Secret Santa ---------- */
   async function renderSanta(body) {

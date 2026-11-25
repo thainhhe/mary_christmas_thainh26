@@ -51,16 +51,21 @@ export function buildRoads(scene) {
   }
 
   const stroke = (extra, style, alpha = 1) => {
-    g.strokeStyle = style; g.globalAlpha = alpha; g.lineCap = 'butt';
+    g.strokeStyle = g.fillStyle = style; g.globalAlpha = alpha; g.lineCap = 'butt';
     for (const p of paths) {
-      g.lineWidth = (p.w + extra) * S;
-      g.beginPath();
-      if (p.ring) g.arc(C, C, p.r * S, 0, Math.PI * 2);
-      else {
-        g.moveTo(C + Math.cos(p.a) * p.r0 * S, C + Math.sin(p.a) * p.r0 * S);
-        g.lineTo(C + Math.cos(p.a) * p.r1 * S, C + Math.sin(p.a) * p.r1 * S);
+      const w = (p.w + extra) * S;
+      if (p.ring) {
+        g.lineWidth = w;
+        g.beginPath(); g.arc(C, C, p.r * S, 0, Math.PI * 2); g.stroke();
+        continue;
       }
-      g.stroke();
+      // Straight roads are FILLED as a quad instead of stroked as a line: on iOS Safari a pattern-stroked line that is
+      // exactly horizontal/vertical (the 4 spokes and 4 of the avenues) drew nothing, leaving black gaps in the road.
+      const ca = Math.cos(p.a), sa = Math.sin(p.a), hx = (-sa * w) / 2, hy = (ca * w) / 2; // half-width, perpendicular to the road
+      const x0 = C + ca * p.r0 * S, y0 = C + sa * p.r0 * S, x1 = C + ca * p.r1 * S, y1 = C + sa * p.r1 * S;
+      g.beginPath();
+      g.moveTo(x0 - hx, y0 - hy); g.lineTo(x1 - hx, y1 - hy); g.lineTo(x1 + hx, y1 + hy); g.lineTo(x0 + hx, y0 + hy);
+      g.closePath(); g.fill();
     }
     g.globalAlpha = 1;
   };

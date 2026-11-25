@@ -12,6 +12,7 @@ import { buildTown } from './town.js';
 import { buildRoads, ROADS } from './roads.js';
 import { createWishers } from './wishers.js';
 import { createRecorder } from './recorder.js';
+import { createFollowCam } from './followcam.js';
 import { LocalPlayer, Crowd, buildNPCs } from './avatars.js';
 import { createSanta, createGifts, createFireworks } from './sky.js';
 import { say, updateBubbles } from './bubbles.js';
@@ -184,7 +185,9 @@ canvas.addEventListener('pointermove', (e) => {
 
 /* ---------- Camera fly-to ---------- */
 let fly = null;
+let followCam = null; // camera behind the avatar when far from the tree (created below, once the recorder exists)
 function flyToOrnament(group) {
+  followCam?.exitNow(true); // the fly-to moves the far orbit camera: leave the follow camera first
   const off = camera.position.clone().sub(controls.target);
   const cur = Math.atan2(off.x, off.z);
   let d = Math.PI / 2 - group.userData.o.angle - cur;
@@ -200,7 +203,7 @@ const ui = initUI({
   wishColors: WISH_COLORS,
   getWishes: () => groups,
   focusWish,
-  record: (opts) => recorder.start(opts),
+  record: (opts) => { followCam?.exitNow(); recorder.start(opts); },
   recSupported: () => recorder.supported,
   setBoard: (rows) => world2.setBoard(rows),
   capture() {
@@ -241,6 +244,13 @@ const recorder = createRecorder({
   onDone: (blob, ext) => ui.showVideoResult(blob, ext),
   onEnd: () => $('sound').setAttribute('aria-pressed', String(sound.isOn())),
 });
+followCam = createFollowCam({ camera, controls, local, isBusy: () => recorder.active });
+const viewBtn = $('view-btn');
+followCam.onChange((on, byUser) => {
+  viewBtn.setAttribute('aria-pressed', String(on));
+  if (on && !byUser && !store.get('noel.followTip', false)) { store.set('noel.followTip', true); toast(t('toast.follow'), 5000); } // explain it once
+});
+viewBtn.addEventListener('click', () => followCam.toggle());
 $('rec-stop').addEventListener('click', () => recorder.stop(recorder.phase !== 'record')); // before it starts: cancel; after: finish early
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && recorder.active) recorder.stop(recorder.phase !== 'record'); });
 
@@ -250,6 +260,7 @@ function spawnMe(p) {
   local.spawn({ ...p, name: me.name });
   if (me.by) wishers.setHidden(me.by); // your own avatar stands in for your wishing character
   $('join-btn').hidden = true;
+  $('view-btn').hidden = false; // the camera button (follow / far view) only makes sense with an avatar
   stick.hidden = !(touchUI || params.has("stick"));
   ui.updateChatState();
   if (first) toast(t('toast.join', { name: me.name }));
@@ -488,7 +499,7 @@ function resize() {
 addEventListener('resize', resize);
 applyQuality(quality);
 
-window.__noel = { camera, controls, santa, fireworks, gifts, local, crowd, scene, recorder };
+window.__noel = { camera, controls, santa, fireworks, gifts, local, crowd, scene, recorder, followCam };
 if (params.has('rec')) { // test: ?rec=SECONDS,style  (add &fw for fireworks)
   const [secs = '4', style = 'orbit'] = params.get('rec').split(',');
   setTimeout(() => recorder.start({ seconds: +secs, style, res: '720', music: params.has('music'), fireworks: params.has('fw'), santa: false, caption: 'Quây quần quanh cây thông', days: true }), 3000);
@@ -518,8 +529,9 @@ renderer.setAnimationLoop(() => {
     if (k >= 1) fly = null;
   }
   recorder.update(); // moves the camera while recording
-  if (!recorder.active) controls.update();
   const moved = local.update(dt, camera);
+  followCam.update(dt, moved); // after the avatar moved, so the camera does not lag a frame behind
+  if (!recorder.active) controls.update();
   if (moved > 0) bus.emit('walk', moved);
   const t0 = performance.now();
   if ((moved > 0 || wasMoving) && t0 - lastSend > 100 && local.g) {

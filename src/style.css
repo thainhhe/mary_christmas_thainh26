@@ -85,6 +85,8 @@ body.idle .topleft, body.idle .cd, body.idle .topright, body.idle .bar, body.idl
 /* bottom bar */
 .bar { position: fixed; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 12px; pointer-events: none; }
 .bar button { pointer-events: auto; }
+#view-btn[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 2px #f7b95566; }
+#view-btn[aria-pressed="true"] svg { stroke: var(--gold); }
 .hint { position: fixed; bottom: calc(12px + env(safe-area-inset-bottom)); left: 190px; right: 170px; margin: 0; text-align: center; font-size: 12px; color: var(--dim); pointer-events: none; text-shadow: 0 1px 6px #000; }
 
 button { font: 600 15px system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 999px; cursor: pointer; color: var(--ink); background: transparent; border: 1px solid #bed7ff59; }
