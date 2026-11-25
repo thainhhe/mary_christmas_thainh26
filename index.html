@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#050b1a" />
+    <meta name="description" content="Đứng quanh cây thông Noel 3D, treo quả châu kèm lời chúc, trò chuyện và đếm ngược tới Giáng sinh." />
+    <title>Quây quần quanh cây thông Noel</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <div class="vignette"></div>
+    <div id="bubbles"></div>
+
+    <header class="topleft">
+      <div class="brand" data-i18n="brand"></div>
+      <div class="pill glass"><i class="dot off" id="dot"></i><span id="presence"></span></div>
+    </header>
+
+    <section class="cd glass">
+      <small data-i18n="cd.title"></small>
+      <div id="countdown"></div>
+    </section>
+
+    <nav class="topright">
+      <button class="icon glass" id="board-btn" data-i18n-aria="aria.board">
+        <svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 01-8 0V4z"/><path d="M8 6H5v1a3 3 0 003 3M16 6h3v1a3 3 0 01-3 3"/><path d="M12 13v4M8.5 20h7M10 17h4"/></svg>
+      </button>
+      <button class="icon glass" id="share" data-i18n-aria="aria.share">
+        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/></svg>
+      </button>
+      <button class="icon glass" id="sound" data-i18n-aria="aria.sound" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="on" d="M16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/><path class="off" d="M17 9l5 6M22 9l-5 6"/></svg>
+      </button>
+      <button class="icon glass" id="menu-btn" data-i18n-aria="aria.menu">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </nav>
+
+    <aside id="menu" class="menu glass" hidden>
+      <h3 data-i18n="menu.more"></h3>
+      <div class="grid">
+        <button id="menu-missions"><span class="mi">📜</span><span><b data-i18n="m.missions"></b><small data-i18n="m.missions.d"></small></span></button>
+        <button id="menu-board"><span class="mi">🏆</span><span><b data-i18n="m.board"></b><small data-i18n="m.board.d"></small></span></button>
+        <button id="menu-santa"><span class="mi">🎅</span><span><b data-i18n="m.santa"></b><small id="m-santa-d">—</small></span></button>
+        <button id="menu-photo"><span class="mi">📷</span><span><b data-i18n="m.photo"></b><small data-i18n="m.photo.d"></small></span></button>
+        <button id="menu-wishes"><span class="mi">✨</span><span><b data-i18n="m.wishes"></b><small id="m-wishes-d">—</small></span></button>
+        <button id="menu-video"><span class="mi">🎬</span><span><b data-i18n="m.video"></b><small data-i18n="m.video.d"></small></span></button>
+        <button id="menu-guide"><span class="mi">🧭</span><span><b data-i18n="m.guide"></b><small data-i18n="m.guide.d"></small></span></button>
+        <button id="menu-feedback"><span class="mi">💌</span><span><b data-i18n="m.feedback"></b><small data-i18n="m.feedback.d"></small></span></button>
+      </div>
+      <div class="links"><button id="menu-terms" class="link">📄 <span data-i18n="m.terms"></span></button></div>
+      <h4 data-i18n="ev.title"></h4>
+      <ul id="events" class="events"></ul>
+      <div class="langs">
+        <span data-i18n="q.title"></span>
+        <div class="seg" id="q-seg"><button data-q="low" data-i18n="q.low"></button><button data-q="mid" data-i18n="q.mid"></button><button data-q="high" data-i18n="q.high"></button></div>
+      </div>
+      <div class="langs">
+        <span data-i18n="lang"></span>
+        <div class="seg"><button id="lang-vi" aria-pressed="true">Tiếng Việt</button><button id="lang-en" aria-pressed="false">English</button></div>
+      </div>
+    </aside>
+
+    <canvas id="minimap" width="280" height="280" data-i18n-aria="aria.map"></canvas>
+
+    <div class="chatwrap">
+      <div id="chat" class="chatpanel glass" hidden>
+        <div class="chead"><b data-i18n="chat.title"></b><button id="chat-close" class="x" data-i18n-aria="close">×</button></div>
+        <ul id="chat-log"></ul>
+        <form id="chat-form"><input id="chat-input" maxlength="100" autocomplete="off" /><button id="chat-send" class="primary sm" data-i18n="chat.send"></button></form>
+      </div>
+      <button id="chat-btn" class="glass chatbtn">
+        <svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4V5z"/></svg><span data-i18n="chat.btn"></span><i id="chat-badge" hidden></i>
+      </button>
+    </div>
+
+    <div id="stick" hidden aria-hidden="true"><i></i></div>
+
+    <div class="bar">
+      <button id="join-btn" class="primary" data-i18n="join"></button>
+      <button id="add" class="ghost" data-i18n="hang"></button>
+    </div>
+    <p class="hint" data-i18n="hint"></p>
+
+    <div id="fb-ask" class="fb-ask glass" role="status" hidden>
+      <p data-i18n="fb.ask"></p>
+      <div class="row"><button type="button" id="fb-ask-go" class="primary sm" data-i18n="fb.ask.go"></button><button type="button" id="fb-ask-later" class="link" data-i18n="fb.ask.later"></button></div>
+    </div>
+
+    <div id="tip" class="tip" hidden></div>
+    <div id="toast" class="toast glass" hidden></div>
+
+    <dialog id="dlg-join" class="big">
+      <div class="mhead"><h2 data-i18n="j.title"></h2><button type="button" id="j-close" class="x" data-i18n-aria="close">×</button></div>
+      <p class="dim" data-i18n="j.sub"></p>
+      <div class="jrow">
+        <div class="avatar"><canvas id="j-canvas" width="150" height="150"></canvas></div>
+        <label class="grow"><small data-i18n="j.name"></small>
+          <input id="j-name" maxlength="24" autocomplete="off" data-i18n-ph="j.ph" />
+        </label>
+      </div>
+      <small class="cap" data-i18n="j.shirt"></small>
+      <div class="swatches" id="j-shirts" role="radiogroup"></div>
+      <small class="cap" data-i18n="j.hat"></small>
+      <div class="swatches" id="j-hats" role="radiogroup"></div>
+      <p class="terms"><span data-i18n="j.terms"></span> <a href="#" id="j-terms" data-i18n="j.terms.link"></a></p>
+      <button type="button" id="j-go" class="primary wide" data-i18n="j.go"></button>
+      <button type="button" id="j-watch" class="link wide" data-i18n="j.watch"></button>
+    </dialog>
+
+    <dialog id="dlg">
+      <form method="dialog" id="form">
+        <h2 data-i18n="w.title"></h2>
+        <label><small data-i18n="w.name"></small><input id="name" maxlength="24" autocomplete="off" data-i18n-ph="w.ph.name" /></label>
+        <label><small data-i18n="w.wish"></small><textarea id="wish" maxlength="120" rows="3" required data-i18n-ph="w.ph.wish"></textarea></label>
+        <div class="swatches" id="colors" role="radiogroup"></div>
+        <div class="row"><button type="button" id="cancel" data-i18n="cancel"></button><button type="submit" class="primary" data-i18n="w.go"></button></div>
+      </form>
+    </dialog>
+
+    <dialog id="modal">
+      <div class="mhead"><h2 id="modal-title"></h2><button type="button" id="modal-close" class="x" data-i18n-aria="close">×</button></div>
+      <div id="modal-body"></div>
+    </dialog>
+
+    <canvas id="rec" hidden></canvas>
+    <div id="rec-ui" hidden><i class="rdot"></i><b id="rec-time"></b><button type="button" id="rec-stop" data-i18n="rv.stop"></button></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+node_modules
+dist
+data
+
+# Cloudflare: local state and local secrets (never commit)
+.wrangler
+.dev.vars
+.env
+.env.*
+!.dev.vars.example
+
+# Vercel local link
+.vercel
+
+# Hand-over notes between work sessions (internal; mentions the live URL and the default /stats login)
+HANDOFF.md
+
+# Local tooling / OS / logs
+.claude/
+*.log
+.DS_Store
+Thumbs.db

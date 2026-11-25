@@ -1,0 +1,24 @@
+{
+  "name": "noel-tree",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node --watch server/index.js",
+    "start": "node server/index.js",
+    "stats:hash": "node scripts/stats-hash.mjs",
+    "cf:dev": "vite build && wrangler dev",
+    "cf:deploy": "vite build && wrangler deploy"
+  },
+  "dependencies": {
+    "three": "^0.170.0",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "wrangler": "^4.168.0"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  // Cloudflare Workers + Durable Objects deployment (see HANDOFF.md §12).  Deploy: npm run cf:deploy
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "noel-tree",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // the built site (npm run build -> dist/). Only these paths run the Worker; everything else is a static file.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/ws", "/stats", "/stats/*"]
+  },
+
+  "durable_objects": {
+    "bindings": [
+      { "name": "HUB", "class_name": "Hub" },
+      { "name": "ANALYTICS", "class_name": "Analytics" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub", "Analytics"] }],
+
+  "vars": {
+    "NODE_ENV": "production",
+    "STATS_TRUST_PROXY": "1",
+    "STATS_LIGHT_KDF": "1",
+    "TZ_OFFSET": "7"
+    // optional: "SANTA_DRAW_AT": "2026-12-24T20:00:00+07:00", "GIFT_EVERY_MS": "90000"
+  },
+
+  "observability": { "enabled": true }
+}

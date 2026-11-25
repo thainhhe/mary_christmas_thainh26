@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/stats", "destination": "/api/stats?action=page" },
+    { "source": "/stats/", "destination": "/api/stats?action=page" },
+    { "source": "/stats/login", "destination": "/api/stats?action=login" },
+    { "source": "/stats/logout", "destination": "/api/stats?action=logout" },
+    { "source": "/stats/data/:range", "destination": "/api/stats?action=data&range=:range" }
+  ]
+}
