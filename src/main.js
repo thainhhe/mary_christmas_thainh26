@@ -16,6 +16,8 @@ import { createFollowCam } from './followcam.js';
 import { buildMarket } from './market.js';
 import { buildTrailOfLights } from './lights.js';
 import { MARKET } from './marketlayout.js';
+import { initWelcome } from './welcome.js';
+import { initNav } from './navigate.js';
 import { LocalPlayer, Crowd, buildNPCs } from './avatars.js';
 import { createSanta, createGifts, createFireworks } from './sky.js';
 import { say, updateBubbles } from './bubbles.js';
@@ -213,7 +215,9 @@ function flyToOrnament(group) {
 function focusWish(g) { flyToOrnament(g); setTimeout(() => showTip(g), 750); }
 
 /* ---------- UI wiring ---------- */
+let welcome = null; // the welcome popup (created below, once the UI exists)
 const ui = initUI({
+  showWelcome: () => welcome?.show(),
   wishColors: WISH_COLORS,
   getWishes: () => groups,
   focusWish,
@@ -250,6 +254,16 @@ const ui = initUI({
 });
 ui.setPresence(null);
 const tarot = initTarot({ getPlayer: () => local.g?.position }); // the Tarot button at the caravan
+
+/* ---------- Village map + directions, and the welcome popup ---------- */
+const nav = initNav({
+  getPlayer: () => local.g?.position, getCamera: () => camera, isJoined: () => me.joined,
+  walk: (route) => { if (route) local.setRoute(route); else { local.route = null; local.target = null; } }, // null = stop walking
+  openJoin: () => $('join-btn').click(),
+});
+welcome = initWelcome({ isJoined: () => me.joined, walkTo: (id) => nav.go(id), openJoin: () => $('join-btn').click() });
+// a first-time visitor sees it once, a moment after the scene appears (not while testing / recording / debugging)
+if (!['demo', 'rec', 'cam', 'open', 'zoom', 'nowelcome'].some((k) => params.has(k))) setTimeout(() => welcome.showFirstTime(), 1800);
 const minigames = initMinigames({ getPlayer: () => local.g?.position }); // the Play button at the market stalls
 
 /* ---------- Video recording (vertical 9:16) ---------- */
@@ -529,7 +543,7 @@ if (params.has('cam')) {
   freeCam = true;
 }
 if (params.has('zoom')) { camera.position.set(0, 4, Number(params.get('zoom'))); controls.update(); } // test: push the camera out and let the clamp lift it
-if (params.has('open')) params.get('open').split(',').forEach((id, i) => setTimeout(() => $(id)?.click(), 1500 + i * 700)); // e.g. ?open=menu-btn,menu-board
+if (params.has('open')) params.get('open').split(',').forEach((id, i) => setTimeout(() => $(id)?.click(), 1500 + i * 700)); // e.g. ?open=menu-btn,menu-guide
 if (params.has('demo')) { me.name = 'Tester'; spawnMe({ x: 6, z: 5, shirt: me.shirt, hat: me.hat }); }
 
 const clock = new THREE.Clock();
@@ -576,6 +590,7 @@ renderer.setAnimationLoop(() => {
   market.update(time, dt);
   minigames.update();
   tarot.update();
+  nav.update();
   tarotCaravan.update(time);
   trail.update(time);
   town.update(time);

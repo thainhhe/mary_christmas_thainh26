@@ -38,17 +38,27 @@
       </button>
     </nav>
 
+    <button class="icon glass" id="map-btn" aria-label="Bản đồ làng">
+      <svg viewBox="0 0 24 24"><path d="M9 4L3 6.5v13L9 17l6 3 6-2.5v-13L15 7 9 4z"/><path d="M9 4v13M15 7v13"/></svg>
+    </button>
+
+    <div id="nav-chip" class="nav-chip glass" hidden>
+      <svg id="nav-arrow" viewBox="0 0 24 24"><path d="M12 2.5l7.5 18-7.5-4.5-7.5 4.5z"/></svg>
+      <span id="nav-text"></span>
+      <button type="button" id="nav-walk" aria-label="Dẫn tôi đi">🚶</button>
+      <button type="button" id="nav-stop" class="x" data-i18n-aria="close">×</button>
+    </div>
+
     <aside id="menu" class="menu glass" hidden>
       <h3 data-i18n="menu.more"></h3>
       <div class="grid">
-        <button id="menu-missions"><span class="mi">📜</span><span><b data-i18n="m.missions"></b><small data-i18n="m.missions.d"></small></span></button>
-        <button id="menu-board"><span class="mi">🏆</span><span><b data-i18n="m.board"></b><small data-i18n="m.board.d"></small></span></button>
         <button id="menu-santa"><span class="mi">🎅</span><span><b data-i18n="m.santa"></b><small id="m-santa-d">—</small></span></button>
         <button id="menu-photo"><span class="mi">📷</span><span><b data-i18n="m.photo"></b><small data-i18n="m.photo.d"></small></span></button>
         <button id="menu-wishes"><span class="mi">✨</span><span><b data-i18n="m.wishes"></b><small id="m-wishes-d">—</small></span></button>
         <button id="menu-video"><span class="mi">🎬</span><span><b data-i18n="m.video"></b><small data-i18n="m.video.d"></small></span></button>
         <button id="menu-guide"><span class="mi">🧭</span><span><b data-i18n="m.guide"></b><small data-i18n="m.guide.d"></small></span></button>
         <button id="menu-feedback"><span class="mi">💌</span><span><b data-i18n="m.feedback"></b><small data-i18n="m.feedback.d"></small></span></button>
+        <button id="menu-donate" class="donate"><span class="mi">☕</span><span><b data-i18n="m.donate"></b><small data-i18n="m.donate.d"></small></span></button>
       </div>
       <div class="links"><button id="menu-terms" class="link">📄 <span data-i18n="m.terms"></span></button></div>
       <h4 data-i18n="ev.title"></h4>
@@ -134,6 +144,16 @@
         <canvas id="g-canvas" width="360" height="520"></canvas>
         <div id="g-over" class="gover"></div>
       </div>
+    </dialog>
+
+    <dialog id="dlg-map" class="vmap">
+      <div class="mhead"><h2 id="map-title"></h2><button type="button" id="map-close" class="x" data-i18n-aria="close">×</button></div>
+      <div id="map-body"></div>
+    </dialog>
+
+    <dialog id="dlg-welcome" class="welcome">
+      <div class="mhead"><h2 id="wc-title"></h2><button type="button" id="wc-close" class="x" data-i18n-aria="close">×</button></div>
+      <div id="wc-body"></div>
     </dialog>
 
     <dialog id="dlg-tarot" class="tarot">

@@ -218,7 +218,6 @@ export function initUI(ctx) {
     }
     body.append(ul, h('p', { class: 'dim', text: t('ms.reset') }));
   }
-  $('menu-missions').addEventListener('click', () => openModal('ms.title', renderMissions));
 
   /* ---------- Leaderboard ---------- */
   let boardCache = null;
@@ -238,7 +237,6 @@ export function initUI(ctx) {
     if (data.me) body.append(h('p', { class: 'dim', text: `${t('lb.you')}: #${data.me.rank} · ${data.me.points} ${t('lb.pts')}` }));
   }
   const openBoard = () => openModal('lb.title', renderBoard);
-  $('menu-board').addEventListener('click', openBoard);
 
   /* ---------- Secret Santa ---------- */
   async function renderSanta(body) {
@@ -356,7 +354,15 @@ export function initUI(ctx) {
   $('menu-terms').addEventListener('click', openTerms);
   $('menu-guide').addEventListener('click', () => openModal('gd.title', (body) => {
     mTitle.dataset.k = 'gd';
+    body.append(h('button', { type: 'button', class: 'primary wide', text: t('wc.open'), onclick: () => { modal.close(); ctx.showWelcome?.(); } }));
     t('gd.body').forEach(([title, text]) => body.append(h('div', { class: 'gd' }, h('b', { text: title }), h('p', { text }))));
+  }));
+  $('menu-donate').addEventListener('click', () => openModal('dn.title', (body) => {
+    mTitle.dataset.k = 'dn';
+    const qr = h('img', { class: 'qr', src: '/donate-qr.png', alt: 'QR', draggable: 'false' });
+    const soon = h('p', { class: 'empty', text: t('dn.soon'), hidden: '' });
+    qr.addEventListener('error', () => { qr.hidden = true; soon.hidden = false; }); // the QR image has not been added yet
+    body.append(h('p', { text: t('dn.body') }), qr, soon, h('p', { class: 'dim', text: t('dn.how') }), h('p', { class: 'dn-thanks', text: t('dn.thanks') }));
   }));
   $('menu-wishes').addEventListener('click', () => openModal('wl.title', (body) => {
     mTitle.dataset.k = 'wl';

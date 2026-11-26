@@ -105,14 +105,18 @@ export class LocalPlayer {
     this.g.position.set(info.x ?? 7, terrainHeight(info.x ?? 7, info.z ?? 0), info.z ?? 0);
     this.scene.add(this.g);
   }
-  despawn() { if (this.g) { this.scene.remove(this.g); this.g = null; } this.target = null; }
+  despawn() { if (this.g) { this.scene.remove(this.g); this.g = null; } this.target = null; this.route = null; }
+  /** Walk through several points in turn (e.g. along the avenue to the market). Any key / joystick input cancels it. */
+  setRoute(points) { this.route = points.map((p) => [p[0], p[1]]); this.nextLeg(); }
+  nextLeg() { if (this.route?.length) { const [x, z] = this.route.shift(); this.setTarget(x, z, true); } else this.route = null; }
   recolor({ shirt, hat }) {
     if (!this.g) return;
     this.g.userData.parts.body.material.color.set(shirt);
     this.g.userData.parts.cone.material.color.set(hat);
     this.g.userData.parts.scarf.material.color.set(hat);
   }
-  setTarget(x, z) {
+  setTarget(x, z, keepRoute = false) {
+    if (!keepRoute) this.route = null; // a tap on the ground cancels a guided walk
     const goal = clampWalk(x, z);
     resolveObstacles(goal); // a click on the tree / campfire / bench: walk to the nearest free spot instead
     clampWalk(goal.x, goal.z, goal);
@@ -129,7 +133,7 @@ export class LocalPlayer {
     const jm = Math.hypot(this.joy.x, this.joy.y), jf = jm > 0.12 ? -this.joy.y : 0, js = jm > 0.12 ? this.joy.x : 0;
     const manual = !!(f || s || jm > 0.12);
     if (manual) {
-      this.target = null;
+      this.target = null; this.route = null;
       const fw = new THREE.Vector3(); camera.getWorldDirection(fw); fw.y = 0; fw.normalize();
       const rt = new THREE.Vector3(-fw.z, 0, fw.x);
       dx = fw.x * (f + jf) + rt.x * (s + js); dz = fw.z * (f + jf) + rt.z * (s + js);
@@ -137,7 +141,7 @@ export class LocalPlayer {
     } else if (this.target) {
       dx = this.target.x - p.x; dz = this.target.z - p.z;
       const l = Math.hypot(dx, dz);
-      if (l < 0.12) { this.target = null; dx = dz = 0; } else { dx /= l; dz /= l; }
+      if (l < 0.12) { this.target = null; this.nextLeg(); dx = dz = 0; } else { dx /= l; dz /= l; }
     }
     let moved = 0;
     if (dx || dz) {
@@ -149,7 +153,7 @@ export class LocalPlayer {
       moved = Math.hypot(p.x - bx, p.z - bz);
       if (!manual && this.target) { // give up when an obstacle keeps pushing us back
         this.stuck = moved < step * 0.3 ? this.stuck + 1 : 0;
-        if (this.stuck > 20) { this.target = null; this.stuck = 0; }
+        if (this.stuck > 20) { this.target = null; this.route = null; this.stuck = 0; }
       }
       faceTo(this.g, Math.atan2(dx, dz), 0.25);
       this.phase += dt * 9;
