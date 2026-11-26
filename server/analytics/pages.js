@@ -127,7 +127,7 @@ const DASH = HEAD('Analytics') + String.raw`<style>${THEME}
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
-  var EV = { join: 'Vào quảng trường (tham gia)', wish: 'Treo quả châu', gift: 'Nhặt quà từ trời', chat: 'Gửi tin nhắn', photo: 'Tải thiệp ảnh', video_start: 'Bắt đầu quay video', video_done: 'Quay video xong', share: 'Bấm chia sẻ', santa_join: 'Đăng ký Ông già Noel bí mật', mission_claim: 'Nhận kẹo nhiệm vụ', lang_switch: 'Đổi ngôn ngữ', feedback_open: 'Mở hộp góp ý', feedback_sent: 'Gửi góp ý', tarot_open: 'Tarot: mở quầy (bấm Xem Tarot)', tarot_shuffle: 'Tarot: bấm Xào bài', tarot_read: 'Tarot: rút đủ 3 lá và xem kết quả', tarot_again: 'Tarot: rút lại lần nữa' };
+  var EV = { join: 'Vào quảng trường (tham gia)', wish: 'Treo quả châu', gift: 'Nhặt quà từ trời', chat: 'Gửi tin nhắn', photo: 'Tải thiệp ảnh', video_start: 'Bắt đầu quay video', video_done: 'Quay video xong', share: 'Bấm chia sẻ', santa_join: 'Đăng ký Ông già Noel bí mật', mission_claim: 'Nhận kẹo nhiệm vụ', lang_switch: 'Đổi ngôn ngữ', feedback_open: 'Mở hộp góp ý', feedback_sent: 'Gửi góp ý', tarot_open: 'Tarot: mở quầy (bấm Xem Tarot)', tarot_shuffle: 'Tarot: bấm Xào bài', tarot_read: 'Tarot: rút đủ 3 lá và xem kết quả', tarot_again: 'Tarot: rút lại lần nữa', ferris_ride: 'Lên vòng quay' };
   var DEV = { desktop: 'Máy tính', mobile: 'Điện thoại', tablet: 'Máy tính bảng' };
   var nf = new Intl.NumberFormat('vi-VN'), cf = new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 });
   var fmt = function (n) { return n < 10000 ? nf.format(n) : cf.format(n); };

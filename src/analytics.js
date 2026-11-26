@@ -2,7 +2,7 @@
 // Not sent from localhost unless the URL has ?track (so development does not pollute the numbers).
 import { bus } from './state.js';
 
-const EVENTS = new Set(['join', 'wish', 'gift', 'chat', 'photo', 'video_start', 'video_done', 'share', 'santa_join', 'mission_claim', 'lang_switch', 'feedback_open', 'feedback_sent', 'tarot_open', 'tarot_shuffle', 'tarot_read', 'tarot_again']);
+const EVENTS = new Set(['join', 'wish', 'gift', 'chat', 'photo', 'video_start', 'video_done', 'share', 'santa_join', 'mission_claim', 'lang_switch', 'feedback_open', 'feedback_sent', 'tarot_open', 'tarot_shuffle', 'tarot_read', 'tarot_again', 'ferris_ride']);
 const q = new URLSearchParams(location.search);
 const local = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 const enabled = !local || q.has('track');

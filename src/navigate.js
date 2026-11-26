@@ -6,6 +6,7 @@ import { MARKET, marketWorld } from './marketlayout.js';
 import { TAROT, TAROT_SPOT, tarotWorld } from './tarotlayout.js';
 import { ROADS } from './roads.js';
 import { FERRIS_POS } from './env.js';
+import { FERRIS_PAD, BOARD } from './ferrislayout.js';
 
 /**
  * Village map + directions. The map button (under the menu button) opens a map with the three places worth visiting
@@ -13,11 +14,12 @@ import { FERRIS_POS } from './env.js';
  * "Show me the way" (an arrow + distance on screen while you walk yourself) or "Take me there" (your avatar walks).
  */
 const onAvenue = (r) => [AVENUE.x * r, AVENUE.z * r];
-const END = { tree: [3.4, 3.4], market: marketWorld(0, 9), tarot: tarotWorld(TAROT_SPOT.lx, TAROT_SPOT.lz) };
+const END = { tree: [3.4, 3.4], market: marketWorld(0, 9), tarot: tarotWorld(TAROT_SPOT.lx, TAROT_SPOT.lz), ferris: [BOARD.x, BOARD.z] };
 export const AREAS = [
   { id: 'tree', icon: '🎄', name: 'wc.tree.t', at: [0, 0] },
   { id: 'market', icon: '🎪', name: 'wc.mk.t', at: [MARKET.x, MARKET.z] },
   { id: 'tarot', icon: '🔮', name: 'wc.tr.t', at: [TAROT.x, TAROT.z] },
+  { id: 'ferris', icon: '🎡', name: 'wc.fw.t', at: [FERRIS_POS.x, FERRIS_POS.z] },
 ];
 const nameOf = (id) => t(`mp.short.${id}`); // short names for the on-screen chip
 
@@ -31,7 +33,7 @@ export function areaRoute(id, p) {
     route.push(END.market);
   } else {
     if (inMarket) route.push(marketWorld(0, 19), onAvenue(30)); // out through the gate and back along the avenue first
-    else if (Math.hypot(p.x, p.z) > 31) route.push(onAvenue(30));
+    else if (Math.hypot(p.x, p.z) > 31 && Math.hypot(p.x - FERRIS_PAD.x, p.z - FERRIS_PAD.z) > FERRIS_PAD.radius + 1) route.push(onAvenue(30)); // (the Ferris wheel's pad joins the plaza directly)
     route.push(END[id]);
   }
   return route;
@@ -93,7 +95,7 @@ export function initNav({ getPlayer, getCamera, isJoined, walk, openJoin }) {
     circle(MARKET.x, MARKET.z, MARKET.radius); g.fillStyle = 'rgba(255,209,102,.16)'; g.fill(); g.strokeStyle = 'rgba(255,209,102,.7)'; g.lineWidth = 3; g.stroke();
     // other landmarks, faint
     g.font = '24px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.globalAlpha = 0.6;
-    for (const [e, x, z] of [['🎬', 44, 3], ['🎡', FERRIS_POS.x, FERRIS_POS.z], ['⛷️', 6, -56], ['🔥', -11, -3]]) g.fillText(e, ...P(x, z));
+    for (const [e, x, z] of [['🎬', 44, 3], ['⛷️', 6, -56], ['🔥', -11, -3]]) g.fillText(e, ...P(x, z));
     g.globalAlpha = 1;
     // route preview for the selected place
     const me = getPlayer();

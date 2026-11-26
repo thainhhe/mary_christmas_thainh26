@@ -5,11 +5,12 @@ import { say } from './bubbles.js';
 import { WALK_RADIUS, clampWalk } from '../shared/walk.js';
 import { MARKET_OBSTACLES } from './marketlayout.js';
 import { TAROT_OBSTACLES } from './tarotlayout.js';
+import { FERRIS_OBSTACLES } from './ferrislayout.js';
 
 export { WALK_RADIUS }; // the plaza + meadow (NPCs and wishing characters stay in it; players may also go to the Christmas market, see clampWalk)
 const TREE_CLEAR = 4.5; // keep avatars off the tree + presents
 // Solid props on the ground: [x, z, radius]. Walkers are pushed out of them.
-const OBSTACLES = [[-36, -22, 2.6], [22, -36, 2.6], [-14, 40, 2.6], [-12.2, -4, 2.2], [-7.2, -7.4, 2.2], [13.5, 6.5, 2.0], [9, 9.5, 0.9], [-9.4, -2.2, 1.1], ...MARKET_OBSTACLES, ...TAROT_OBSTACLES];
+const OBSTACLES = [[-36, -22, 2.6], [22, -36, 2.6], [-14, 40, 2.6], [-12.2, -4, 2.2], [-7.2, -7.4, 2.2], [13.5, 6.5, 2.0], [9, 9.5, 0.9], [-9.4, -2.2, 1.1], ...MARKET_OBSTACLES, ...TAROT_OBSTACLES, ...FERRIS_OBSTACLES];
 export function resolveObstacles(p) {
   const r = Math.hypot(p.x, p.z);
   if (r < TREE_CLEAR) { const m = TREE_CLEAR / (r || 1); p.x *= m; p.z *= m; }

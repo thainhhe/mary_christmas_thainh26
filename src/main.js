@@ -29,6 +29,7 @@ import { now, params, activeEvent, santaSlot, santaSlotAge } from './clock.js';
 import { initUI } from './ui.js';
 import { initMinigames } from './minigames.js';
 import { buildTarot, initTarot } from './tarot.js';
+import { buildFerrisPad, initFerris } from './ferris.js';
 import { TAROT } from './tarotlayout.js';
 import { initAnalytics } from './analytics.js';
 
@@ -83,6 +84,7 @@ const env = buildEnvironment(scene);
 const tree = buildTree(scene, envMap);
 const world2 = buildWorld2(scene);
 const tarotCaravan = buildTarot(scene); // the tarot caravan next to the blue-scarf snowman
+const ferrisPad = buildFerrisPad(scene); // boarding platform, ticket booth and sign in front of the Ferris wheel
 const market = buildMarket(scene); // the Christmas market at the end of the south-west avenue
 const trail = buildTrailOfLights(scene); // the lit avenue leading to it
 const town = buildTown(scene);
@@ -201,7 +203,8 @@ canvas.addEventListener('pointermove', (e) => {
 
 /* ---------- Camera fly-to ---------- */
 let fly = null;
-let followCam = null; // camera behind the avatar when far from the tree (created below, once the recorder exists)
+let followCam = null;
+let ferrisRide = null; // the Ferris wheel ride (created with the follow camera) // camera behind the avatar when far from the tree (created below, once the recorder exists)
 function flyToOrnament(group) {
   followCam?.exitNow(true); // the fly-to moves the far orbit camera: leave the follow camera first
   const off = camera.position.clone().sub(controls.target);
@@ -221,7 +224,7 @@ const ui = initUI({
   wishColors: WISH_COLORS,
   getWishes: () => groups,
   focusWish,
-  record: (opts) => { followCam?.exitNow(); recorder.start(opts); },
+  record: (opts) => { ferrisRide?.stop(); followCam?.exitNow(); recorder.start(opts); },
   recSupported: () => recorder.supported,
   setBoard: (rows) => { world2.setBoard(rows); market.setBoard(rows); },
   capture() {
@@ -274,7 +277,8 @@ const recorder = createRecorder({
   onDone: (blob, ext) => ui.showVideoResult(blob, ext),
   onEnd: () => $('sound').setAttribute('aria-pressed', String(sound.isOn())),
 });
-followCam = createFollowCam({ camera, controls, local, isBusy: () => recorder.active });
+followCam = createFollowCam({ camera, controls, local, isBusy: () => recorder.active || !!ferrisRide?.active });
+ferrisRide = initFerris({ ferris: env.ferris, camera, controls, local, followCam, getPlayer: () => local.g?.position, isBlocked: () => recorder.active || !!document.querySelector('dialog[open]') });
 const viewBtn = $('view-btn');
 followCam.onChange((on, byUser) => {
   viewBtn.setAttribute('aria-pressed', String(on));
@@ -299,6 +303,10 @@ function spawnMe(p) {
 /* ---------- Network ---------- */
 net.on('open', () => { online = true; });
 net.on('close', () => { online = false; me.ready = false; ui.setPresence(null); crowd.clear(); });
+// Someone who already pressed Join on an earlier visit gets their avatar back without pressing it again. The server keeps no profile
+// (an avatar lives only as long as its connection); this browser remembers the name + colours (noel.name / shirt / hat) and the fact that they joined.
+const returning = store.get('noel.joined', false) && !!me.name;
+if (returning) { $('join-btn').hidden = true; setTimeout(() => { if (!me.joined) $('join-btn').hidden = false; }, 8000); } // (the button comes back if the automatic join did not work)
 net.on('welcome', (m) => {
   me.pid = m.pid; me.by = m.by;
   if (me.joined && me.by) wishers.setHidden(me.by);
@@ -307,7 +315,7 @@ net.on('welcome', (m) => {
   m.players.forEach((p) => { if (p.id !== me.pid) crowd.add(p); });
   m.gifts.forEach((g) => gifts.add(g));
   ui.setHistory(m.chat);
-  if (me.joined) net.send({ type: 'join', name: me.name, shirt: me.shirt, hat: me.hat }); // re-join after reconnect
+  if (me.joined || returning) net.send({ type: 'join', name: me.name, shirt: me.shirt, hat: me.hat }); // re-join after a reconnect, or join by itself for someone who already joined on an earlier visit
 });
 net.on('online', (m) => ui.setPresence({ online: m.online, today: m.today }));
 net.on('join', ({ player: p }) => {
@@ -343,7 +351,9 @@ net.on('error', (m) => {
   } catch {
     online = false;
     loadLocal();
+    if (returning && !me.joined) spawnMe({ name: me.name, shirt: me.shirt, hat: me.hat, x: 7, z: 0 }); // offline: the same as pressing Join
   }
+  window.__boot?.mark('data'); // the loading screen (index.html) waits for the wishes as well as the first frame
 })();
 
 /* ---------- Sound ---------- */
@@ -529,7 +539,7 @@ function resize() {
 addEventListener('resize', resize);
 applyQuality(quality);
 
-window.__noel = { camera, controls, santa, fireworks, gifts, local, crowd, scene, recorder, followCam };
+window.__noel = { ferris: env.ferris, camera, controls, santa, fireworks, gifts, local, crowd, scene, recorder, followCam };
 if (params.has('rec')) { // test: ?rec=SECONDS,style  (add &fw for fireworks)
   const [secs = '4', style = 'orbit'] = params.get('rec').split(',');
   setTimeout(() => recorder.start({ seconds: +secs, style, res: '720', music: params.has('music'), fireworks: params.has('fw'), santa: false, caption: 'Quây quần quanh cây thông', days: true }), 3000);
@@ -560,7 +570,7 @@ function pickUpGifts() {
   }
 }
 
-let lastSend = 0, wasMoving = false, mmT = 0, marketWelcomed = false;
+let lastSend = 0, wasMoving = false, mmT = 0, marketWelcomed = false, bootShown = false;
 renderer.setAnimationLoop(() => {
   const rawDt = clock.getDelta(), dt = Math.min(rawDt, 0.05), time = clock.elapsedTime;
   watchPerf(rawDt);
@@ -572,10 +582,11 @@ renderer.setAnimationLoop(() => {
     if (k >= 1) fly = null;
   }
   recorder.update(); // moves the camera while recording
-  const moved = local.update(dt, camera);
+  const moved = ferrisRide.active ? 0 : local.update(dt, camera); // riding the Ferris wheel: the (hidden) avatar waits on the pad
+  ferrisRide.update(dt);
   pickUpGifts();
   followCam.update(dt, moved); // after the avatar moved, so the camera does not lag a frame behind
-  if (!recorder.active) controls.update();
+  if (!recorder.active && !ferrisRide.active) controls.update(); // (the Ferris wheel ride steers the camera itself)
   if (moved > 0) bus.emit('walk', moved);
   if (!marketWelcomed && local.g && Math.hypot(local.g.position.x - MARKET.x, local.g.position.z - MARKET.z) < MARKET.radius - 1) { marketWelcomed = true; toast(t('toast.market'), 5000); } // once per visit
   const t0 = performance.now();
@@ -590,6 +601,7 @@ renderer.setAnimationLoop(() => {
   market.update(time, dt);
   minigames.update();
   tarot.update();
+  ferrisPad.update(time);
   nav.update();
   tarotCaravan.update(time);
   trail.update(time);
@@ -608,4 +620,5 @@ renderer.setAnimationLoop(() => {
   if (time - mmT > 0.1) { mmT = time; drawMinimap(); }
   composer.render();
   recorder.frame();
+  if (!bootShown) { bootShown = true; window.__boot?.mark('frame'); } // the first picture is on screen: the loading screen may go
 });

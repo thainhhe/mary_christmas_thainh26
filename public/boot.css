@@ -1,0 +1,25 @@
+/* Loading screen: lives in the HTML so it paints before any script or stylesheet arrives (until then the buttons have no text yet) */
+html, body { background: #050b1a; }
+#boot { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 36%, #14306a 0%, #0a1633 48%, #050b1a 100%); color: #eef4ff; font: 500 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; transition: opacity .8s ease, visibility .8s; }
+#boot.out { opacity: 0; visibility: hidden; pointer-events: none; }
+#boot .snow { position: absolute; inset: 0; pointer-events: none; }
+#boot .snow i { position: absolute; top: -12px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%; background: #fff; opacity: .75; animation: boot-fall var(--d) linear var(--l) infinite; }
+@keyframes boot-fall { to { transform: translate3d(var(--w), 108vh, 0); } }
+#boot svg { position: relative; width: 156px; height: auto; overflow: visible; filter: drop-shadow(0 0 22px rgba(247, 185, 85, .28)); }
+#boot .tier { fill: #14653b; } #boot .tier2 { fill: #1a7a46; } #boot .tier3 { fill: #20925a; } #boot .trunk { fill: #5b3a26; }
+#boot .bulb { fill: currentColor; opacity: .22; filter: drop-shadow(0 0 3px currentColor); animation: boot-bulb 1.6s ease-in-out calc(var(--i) * .16s) infinite; }
+@keyframes boot-bulb { 0%, 100% { opacity: .2; } 45% { opacity: 1; } }
+#boot .star { fill: #ffd166; transform-origin: 60px 13px; filter: drop-shadow(0 0 6px #ffd166); animation: boot-star 2.4s ease-in-out infinite; }
+@keyframes boot-star { 0%, 100% { transform: scale(.9); opacity: .75; } 50% { transform: scale(1.12); opacity: 1; } }
+#boot .brand { position: relative; margin-top: 6px; font-size: 11px; letter-spacing: .26em; text-transform: uppercase; color: #f7b955; }
+#boot .msg { position: relative; font-size: 17px; font-weight: 600; }
+#boot .msg b { display: inline-block; font-weight: 700; animation: boot-dot 1.2s ease-in-out infinite; }
+#boot .msg b:nth-of-type(2) { animation-delay: .2s; } #boot .msg b:nth-of-type(3) { animation-delay: .4s; }
+@keyframes boot-dot { 0%, 80%, 100% { opacity: .2; } 40% { opacity: 1; } }
+#boot .note { position: relative; margin: 0; max-width: 300px; font-size: 13px; color: #a9bfe0; min-height: 1.4em; }
+#boot .reload { position: relative; font: 600 15px system-ui, sans-serif; min-height: 44px; padding: 0 22px; border-radius: 999px; cursor: pointer; color: #f7b955; background: rgba(9, 18, 44, .62); border: 1px solid rgba(247, 185, 85, .6); }
+/* ready: every light comes on together just before the screen fades */
+#boot.ready .bulb { animation: none; opacity: 1; transition: opacity .35s; }
+#boot.ready .star { animation: none; transform: scale(1.25); transition: transform .35s; }
+@media (prefers-reduced-motion: reduce) { #boot .snow { display: none; } #boot .bulb { animation: none; opacity: .7; } #boot .star, #boot .msg b { animation: none; } #boot { transition-duration: .3s; } }

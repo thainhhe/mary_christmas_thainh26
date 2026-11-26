@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeGlow, discTex, softTex, flakeTex, mulberry, smooth, vnoise, terrainHeight } from './textures.js';
 import { MARKET_CLEAR } from './marketlayout.js';
+import { FERRIS } from '../shared/walk.js';
 
 const dummy = new THREE.Object3D();
 
@@ -36,7 +37,7 @@ export function bulbSet(positions, colorFn, radius = 0.06, phaseFn = (i) => i * 
 }
 
 // Landmark layout shared with town.js: [x, z, clearRadius]
-export const FERRIS_POS = new THREE.Vector3(-32, 0, -27);
+export const FERRIS_POS = new THREE.Vector3(FERRIS.x, 0, FERRIS.z);
 export const CABIN_POS = [[22, -36, 0.5], [-36, -22, -0.9], [-14, 40, 3.1]];
 export const CLEAR = [
   [FERRIS_POS.x, FERRIS_POS.z, 15], ...CABIN_POS.map(([x, z]) => [x, z, 4]),
@@ -211,6 +212,7 @@ export function buildEnvironment(scene) {
   snowman(-8, 4.5, 0.85, '#d62839'); snowman(8.5, 3.2, 1.0, '#2a9d8f'); snowman(5.5, -8, 0.8, '#4361ee');
 
   /* ---- Ferris wheel ---- */
+  const ferris = { wheel: null, pivots: null, root: null, speed: 0.07, riding: false, /* the ride (ferris.js) turns the wheel itself while riding */ };
   {
     const root = new THREE.Group();
     root.position.set(FERRIS.x, terrainHeight(FERRIS.x, FERRIS.z), FERRIS.z);
@@ -246,9 +248,10 @@ export function buildEnvironment(scene) {
     }
     for (const s of [-1, 1]) for (const z of [-0.6, 0.6]) root.add(cylinderBetween(new THREE.Vector3(0, cy, z), new THREE.Vector3(s * 4.5, 0, z * 3), 0.14, metal));
     scene.add(root);
+    Object.assign(ferris, { wheel, pivots, root });
     updaters.push((t, dt) => {
-      wheel.rotation.z += dt * 0.07;
-      pivots.forEach((p) => { p.rotation.z = -wheel.rotation.z; });
+      if (!ferris.riding) wheel.rotation.z += dt * ferris.speed;
+      pivots.forEach((p) => { p.rotation.z = -wheel.rotation.z; }); // the cars hang level
       wb.update(t, 1.5, 3);
     });
   }
@@ -282,6 +285,7 @@ export function buildEnvironment(scene) {
   snowLayer(140, 0.45, 0.3, [36, 16], 0.6);
 
   return {
+    ferris,
     update(t, dt) { for (const u of updaters) u(t, dt); },
     /** q: { snow, bokeh, trees, glitter } — fractions 0..1 (glitter boolean). Cheap runtime quality switch. */
     setQuality(q) {

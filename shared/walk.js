@@ -4,7 +4,8 @@
 // The walkable area is the union of
 //   1. the plaza + meadow: a disc of WALK_RADIUS around the tree,
 //   2. the "Broadway" avenue: a corridor leaving the plaza towards the south-west,
-//   3. the Christmas market: a big square (disc of SQUARE.radius) at the end of that avenue.
+//   3. the Christmas market: a big square (disc of SQUARE.radius) at the end of that avenue,
+//   4. the boarding pad in front of the Ferris wheel: a small disc that overlaps the plaza disc.
 
 export const WALK_RADIUS = 32; // the plaza + meadow, up to the main street
 
@@ -14,6 +15,10 @@ export const SQUARE = {
   x: AVENUE.x * AVENUE.r1, z: AVENUE.z * AVENUE.r1, // centre of the Christmas market (63 units from the tree; its gate is still ~42.6 out)
   radius: 22,                                        // walkable disc
 };
+
+export const FERRIS = { x: -32, z: -27 }; // the Ferris wheel's base (src/env.js), 42 units from the tree towards the north-west
+const fd = Math.hypot(FERRIS.x, FERRIS.z);
+export const FERRIS_PAD = { x: (FERRIS.x / fd) * 35, z: (FERRIS.z / fd) * 35, radius: 4.2 }; // reaches 31..39.2: it ends before the wheel's legs (39.5)
 
 const set = (out, x, z) => { out.x = x; out.z = z; return out; };
 
@@ -30,10 +35,14 @@ export function clampWalk(x, z, out = {}) {
   const ds = Math.hypot(x - SQUARE.x, z - SQUARE.z);
   if (ds <= SQUARE.radius) return set(out, x, z);
 
+  const dp = Math.hypot(x - FERRIS_PAD.x, z - FERRIS_PAD.z);
+  if (dp <= FERRIS_PAD.radius) return set(out, x, z);
+
   // outside everything: take the closest of the three edges
   let bx = x * (WALK_RADIUS / r), bz = z * (WALK_RADIUS / r), bd = r - WALK_RADIUS;
   const kc = AVENUE.halfWidth / dc;
   if (dc - AVENUE.halfWidth < bd) { bd = dc - AVENUE.halfWidth; bx = cx + (x - cx) * kc; bz = cz + (z - cz) * kc; }
   if (ds - SQUARE.radius < bd) { const ks = SQUARE.radius / ds; bx = SQUARE.x + (x - SQUARE.x) * ks; bz = SQUARE.z + (z - SQUARE.z) * ks; }
+  if (dp - FERRIS_PAD.radius < bd) { const kp = FERRIS_PAD.radius / dp; bx = FERRIS_PAD.x + (x - FERRIS_PAD.x) * kp; bz = FERRIS_PAD.z + (z - FERRIS_PAD.z) * kp; }
   return set(out, bx, bz);
 }

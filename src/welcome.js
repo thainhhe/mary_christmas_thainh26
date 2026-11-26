@@ -2,8 +2,8 @@ import { $, store } from './state.js';
 import { t, onLang } from './i18n.js';
 
 /**
- * The welcome popup: shown once to new visitors (and again from Menu -> Guide) to introduce the three places worth visiting:
- * the Christmas tree, the market with its 12 mini-games, and the tarot caravan. Once you have an avatar each place gets a
+ * The welcome popup: shown once to new visitors (and again from Menu -> Guide) to introduce the places worth visiting:
+ * the Christmas tree, the market with its 12 mini-games, the tarot caravan and the Ferris wheel. Once you have an avatar each place gets a
  * "Take me there" button that walks you along the road.
  */
 const KEY = 'noel.welcome.v1';
@@ -11,6 +11,7 @@ const AREAS = [
   { id: 'tree', icon: '🎄', t: 'wc.tree.t', d: 'wc.tree.d' },
   { id: 'market', icon: '🎪', t: 'wc.mk.t', d: 'wc.mk.d' },
   { id: 'tarot', icon: '🔮', t: 'wc.tr.t', d: 'wc.tr.d' },
+  { id: 'ferris', icon: '🎡', t: 'wc.fw.t', d: 'wc.fw.d' },
 ];
 
 export function initWelcome({ isJoined, walkTo, openJoin }) {

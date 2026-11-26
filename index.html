@@ -6,9 +6,71 @@
     <meta name="theme-color" content="#050b1a" />
     <meta name="description" content="Đứng quanh cây thông Noel 3D, treo quả châu kèm lời chúc, trò chuyện và đếm ngược tới Giáng sinh." />
     <title>Quây quần quanh cây thông Noel</title>
+    <link rel="stylesheet" href="/boot.css" /> <!-- the loading screen's styles: a tiny separate file so it paints at once -->
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
+    <div id="boot" role="status" aria-live="polite">
+      <div class="snow" id="boot-snow" aria-hidden="true"></div>
+      <svg viewBox="0 0 120 150" aria-hidden="true">
+        <polygon class="tier" points="60,22 32,62 88,62" />
+        <polygon class="tier2" points="60,42 24,92 96,92" />
+        <polygon class="tier3" points="60,66 14,126 106,126" />
+        <rect class="trunk" x="53" y="126" width="14" height="18" rx="2" />
+        <polygon class="star" points="60,2 64,10 73,11 66,17 68,26 60,21 52,26 54,17 47,11 56,10" />
+        <g>
+          <circle class="bulb" style="--i:0;color:#ff6b6b" cx="60" cy="38" r="3" />
+          <circle class="bulb" style="--i:1;color:#ffd166" cx="50" cy="55" r="3" />
+          <circle class="bulb" style="--i:2;color:#6bc8ff" cx="70" cy="58" r="3" />
+          <circle class="bulb" style="--i:3;color:#8ee08e" cx="42" cy="76" r="3" />
+          <circle class="bulb" style="--i:4;color:#ff6b6b" cx="62" cy="78" r="3" />
+          <circle class="bulb" style="--i:5;color:#ffd166" cx="80" cy="82" r="3" />
+          <circle class="bulb" style="--i:6;color:#6bc8ff" cx="34" cy="104" r="3" />
+          <circle class="bulb" style="--i:7;color:#8ee08e" cx="54" cy="100" r="3" />
+          <circle class="bulb" style="--i:8;color:#ff6b6b" cx="72" cy="106" r="3" />
+          <circle class="bulb" style="--i:9;color:#ffd166" cx="90" cy="108" r="3" />
+          <circle class="bulb" style="--i:10;color:#6bc8ff" cx="44" cy="120" r="3" />
+          <circle class="bulb" style="--i:11;color:#8ee08e" cx="82" cy="122" r="3" />
+        </g>
+      </svg>
+      <div class="brand" id="boot-brand"></div>
+      <div class="msg"><span id="boot-msg"></span><b>.</b><b>.</b><b>.</b></div>
+      <p class="note" id="boot-note"></p>
+      <button type="button" class="reload" id="boot-reload" hidden></button>
+    </div>
+    <script>
+      (function () {
+        var lang; try { lang = localStorage.getItem('noel.lang'); } catch (e) {}
+        lang = lang || ((navigator.language || '').indexOf('vi') === 0 ? 'vi' : 'en');
+        var T = lang === 'vi'
+          ? { brand: 'Quây quần quanh cây thông Noel', msg: 'Đang thắp đèn cho cây thông', slow: 'Mạng đang hơi chậm, bạn chờ chút nhé…', err: 'Chưa tải được trang.', reload: 'Tải lại' }
+          : { brand: 'Around the Christmas tree', msg: 'Lighting up the Christmas tree', slow: 'The network is a little slow, hang on…', err: 'The page did not load.', reload: 'Reload' };
+        var $ = function (id) { return document.getElementById(id); };
+        $('boot-brand').textContent = T.brand; $('boot-msg').textContent = T.msg; $('boot-reload').textContent = T.reload;
+        $('boot-reload').onclick = function () { location.reload(); };
+        var html = '';
+        for (var i = 0; i < 26; i++) html += '<i style="--x:' + (Math.random() * 100).toFixed(1) + '%;--s:' + (2 + Math.random() * 3).toFixed(1) + 'px;--d:' + (6 + Math.random() * 6).toFixed(1) + 's;--l:-' + (Math.random() * 10).toFixed(1) + 's;--w:' + ((Math.random() - 0.5) * 60).toFixed(0) + 'px"></i>';
+        $('boot-snow').innerHTML = html;
+
+        var got = {}, done = false, t0 = Date.now();
+        var slowTimer = setTimeout(function () { if (!done) $('boot-note').textContent = T.slow; }, 8000);
+        function finish() {
+          if (done) return; done = true; clearTimeout(slowTimer);
+          var el = $('boot'); el.classList.add('ready');
+          setTimeout(function () {
+            el.classList.add('out');
+            setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 900);
+          }, 380);
+        }
+        function check() {
+          if (done || !got.frame || !got.data) return;
+          setTimeout(finish, Math.max(0, 600 - (Date.now() - t0))); // never a blink: the screen stays at least ~0.6 s
+        }
+        // main.js reports 'frame' (the first picture is drawn) and 'data' (the wishes arrived, or failed); if the wishes are slow we stop waiting 4 s after the first frame
+        window.__boot = { mark: function (k) { got[k] = true; if (k === 'frame') setTimeout(function () { got.data = true; check(); }, 4000); check(); } };
+        addEventListener('error', function (e) { if (done) return; if (e.target && e.target !== window && e.target.tagName !== 'SCRIPT') return; $('boot-note').textContent = T.err; $('boot-reload').hidden = false; }, true); // capture: also sees a script that failed to load
+      })();
+    </script>
     <canvas id="scene"></canvas>
     <div class="vignette"></div>
     <div id="bubbles"></div>
@@ -101,6 +163,11 @@
 
     <button id="play-btn" class="primary" hidden></button>
     <button id="tarot-btn" class="primary" hidden></button>
+    <button id="ferris-btn" class="primary" hidden></button>
+    <div id="ferris-hud" class="ferris-hud glass" role="status" hidden>
+      <span id="ferris-text"></span>
+      <button type="button" id="ferris-down" class="primary sm"></button>
+    </div>
     <div id="tip" class="tip" hidden></div>
     <div id="toast" class="toast glass" hidden></div>
 

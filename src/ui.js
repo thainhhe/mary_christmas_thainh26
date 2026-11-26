@@ -139,7 +139,7 @@ export function initUI(ctx) {
   $('j-go').addEventListener('click', () => {
     me.name = nameEl.value.trim().slice(0, 24) || (getLang() === 'vi' ? 'Khách' : 'Guest');
     me.shirt = draft.shirt; me.hat = draft.hat;
-    store.set('noel.name', me.name); store.set('noel.shirt', me.shirt); store.set('noel.hat', me.hat);
+    store.set('noel.name', me.name); store.set('noel.shirt', me.shirt); store.set('noel.hat', me.hat); store.set('noel.joined', true); // remembered: the next visit joins by itself
     dlgJoin.close();
     track('join');
     ctx.join({ name: me.name, shirt: me.shirt, hat: me.hat });
