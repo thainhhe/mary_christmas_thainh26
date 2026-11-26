@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeGlow, flakeTex } from './textures.js';
+import { makeGlow, flakeTex, terrainHeight } from './textures.js';
 import { cylinderBetween } from './env.js';
 
 const std = (color, rough = 0.7, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: rough, ...extra });
@@ -252,7 +252,7 @@ export function createGifts(scene, fireworks) {
       g.position.set(x, 28, z);
       g.scale.setScalar(1.3);
       scene.add(g);
-      items.set(id, { g, chute, strings, glow, hit, x, z, t0: performance.now() - age, ph: Math.random() * 6 });
+      items.set(id, { g, chute, strings, glow, hit, x, z, gy: terrainHeight(x, z), landed: false, t0: performance.now() - age, ph: Math.random() * 6 });
     },
     remove(id, burst = true) {
       const it = items.get(id);
@@ -263,17 +263,20 @@ export function createGifts(scene, fireworks) {
     },
     hitboxes() { return [...items.values()].map((i) => i.hit); },
     positions() { return [...items.values()].map((i) => ({ x: i.x, z: i.z })); },
+    /** every gift with its id, spot and whether it has reached the ground (only landed ones can be picked up) */
+    list() { return [...items.entries()].map(([id, i]) => ({ id, x: i.x, z: i.z, landed: i.landed })); },
+    posOf(id) { const i = items.get(id); return i ? { x: i.x, z: i.z } : null; },
     count: () => items.size,
     update(time) {
       const now = performance.now();
       for (const it of items.values()) {
         const k = Math.min((now - it.t0) / FALL_MS, 1), e = 1 - Math.pow(1 - k, 1.6);
-        it.g.position.y = 28 * (1 - e);
+        it.g.position.y = it.gy + 28 * (1 - e);
         it.g.position.x = it.x + (1 - k) * Math.sin(time * 0.8 + it.ph) * 1.8;
         it.g.position.z = it.z + (1 - k) * Math.cos(time * 0.6 + it.ph) * 1.2;
-        const landed = k >= 1;
+        const landed = it.landed = k >= 1;
         it.chute.visible = it.strings.visible = !landed;
-        if (landed) { it.g.position.set(it.x, Math.abs(Math.sin(time * 2.4 + it.ph)) * 0.18, it.z); it.g.rotation.y += 0.01; }
+        if (landed) { it.g.position.set(it.x, it.gy + Math.abs(Math.sin(time * 2.4 + it.ph)) * 0.18, it.z); it.g.rotation.y += 0.01; }
         it.glow.material.opacity = 0.45 + 0.3 * Math.sin(time * 4 + it.ph);
       }
     },

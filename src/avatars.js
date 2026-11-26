@@ -1,12 +1,14 @@
 import * as THREE from 'three';
-import { mulberry } from './textures.js';
+import { mulberry, terrainHeight } from './textures.js';
 import { t } from './i18n.js';
 import { say } from './bubbles.js';
+import { WALK_RADIUS, clampWalk } from '../shared/walk.js';
+import { MARKET_OBSTACLES } from './marketlayout.js';
 
-export const WALK_RADIUS = 32; // the whole plaza + meadow, up to the main street
+export { WALK_RADIUS }; // the plaza + meadow (NPCs and wishing characters stay in it; players may also go to the Christmas market, see clampWalk)
 const TREE_CLEAR = 4.5; // keep avatars off the tree + presents
 // Solid props on the ground: [x, z, radius]. Walkers are pushed out of them.
-const OBSTACLES = [[-36, -22, 2.6], [22, -36, 2.6], [-14, 40, 2.6], [-12.2, -4, 2.2], [-7.2, -7.4, 2.2], [13.5, 6.5, 2.0], [9, 9.5, 0.9], [-9.4, -2.2, 1.1]];
+const OBSTACLES = [[-36, -22, 2.6], [22, -36, 2.6], [-14, 40, 2.6], [-12.2, -4, 2.2], [-7.2, -7.4, 2.2], [13.5, 6.5, 2.0], [9, 9.5, 0.9], [-9.4, -2.2, 1.1], ...MARKET_OBSTACLES];
 export function resolveObstacles(p) {
   const r = Math.hypot(p.x, p.z);
   if (r < TREE_CLEAR) { const m = TREE_CLEAR / (r || 1); p.x *= m; p.z *= m; }
@@ -71,6 +73,9 @@ export function createPerson({ shirt = '#e63946', hat = '#d62839', name = '', np
   const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture(name, npc), depthWrite: false, toneMapped: false, fog: false, color: new THREE.Color(0.8, 0.8, 0.8) }));
   label.scale.set(1.6, 0.4, 1);
   label.position.y = 1.95;
+  // Transparent layers are drawn in renderOrder: the road overlay (1) and the market floor (2) are transparent too, and a
+  // label drawn before them gets painted over (cut off, or hidden) whenever a road lies behind it on screen. Draw it last.
+  label.renderOrder = 10;
   g.add(body, head, cone, brim, bob, scarf, label);
   g.scale.setScalar(1.25);
   g.userData.label = label;
@@ -95,7 +100,8 @@ export class LocalPlayer {
   spawn(info) {
     this.despawn();
     this.g = createPerson(info);
-    this.g.position.set(info.x ?? 7, 0, info.z ?? 0);
+    this.bob = 0;
+    this.g.position.set(info.x ?? 7, terrainHeight(info.x ?? 7, info.z ?? 0), info.z ?? 0);
     this.scene.add(this.g);
   }
   despawn() { if (this.g) { this.scene.remove(this.g); this.g = null; } this.target = null; }
@@ -106,10 +112,9 @@ export class LocalPlayer {
     this.g.userData.parts.scarf.material.color.set(hat);
   }
   setTarget(x, z) {
-    const r = Math.hypot(x, z);
-    if (r > WALK_RADIUS) { x *= WALK_RADIUS / r; z *= WALK_RADIUS / r; }
-    const goal = { x, z };
+    const goal = clampWalk(x, z);
     resolveObstacles(goal); // a click on the tree / campfire / bench: walk to the nearest free spot instead
+    clampWalk(goal.x, goal.z, goal);
     this.target = goal; this.stuck = 0;
   }
   /** Returns the distance actually travelled this frame (pushed-back steps do not count). */
@@ -137,9 +142,9 @@ export class LocalPlayer {
     if (dx || dz) {
       const step = 3.6 * dt, bx = p.x, bz = p.z;
       p.x += dx * step; p.z += dz * step;
-      const r = Math.hypot(p.x, p.z);
-      if (r > WALK_RADIUS) { p.x *= WALK_RADIUS / r; p.z *= WALK_RADIUS / r; }
+      clampWalk(p.x, p.z, p);
       resolveObstacles(p);
+      clampWalk(p.x, p.z, p); // being pushed out of a building must not carry us outside the walkable area
       moved = Math.hypot(p.x - bx, p.z - bz);
       if (!manual && this.target) { // give up when an obstacle keeps pushing us back
         this.stuck = moved < step * 0.3 ? this.stuck + 1 : 0;
@@ -147,8 +152,9 @@ export class LocalPlayer {
       }
       faceTo(this.g, Math.atan2(dx, dz), 0.25);
       this.phase += dt * 9;
-      p.y = Math.abs(Math.sin(this.phase)) * 0.06;
-    } else p.y *= 0.8;
+      this.bob = Math.abs(Math.sin(this.phase)) * 0.06;
+    } else this.bob *= 0.8;
+    p.y = terrainHeight(p.x, p.z) + this.bob; // stand ON the ground: it rises up to ~2 units towards the ski slope
     return moved;
   }
 }
@@ -159,9 +165,9 @@ export class Crowd {
   add(p) {
     if (this.map.has(p.id)) return;
     const g = createPerson(p);
-    g.position.set(p.x, 0, p.z);
+    g.position.set(p.x, terrainHeight(p.x, p.z), p.z);
     this.scene.add(g);
-    this.map.set(p.id, { g, tx: p.x, tz: p.z, name: p.name, ph: Math.random() * 6 });
+    this.map.set(p.id, { g, tx: p.x, tz: p.z, name: p.name, ph: Math.random() * 6, bob: 0 });
   }
   move(id, x, z) { const e = this.map.get(id); if (e) { e.tx = x; e.tz = z; } }
   remove(id) { const e = this.map.get(id); if (e) { this.scene.remove(e.g); this.map.delete(id); } }
@@ -174,8 +180,9 @@ export class Crowd {
         const step = Math.min(d, Math.max(3.6, d * 4) * dt);
         p.x += (dx / d) * step; p.z += (dz / d) * step;
         faceTo(e.g, Math.atan2(dx, dz), 0.25);
-        p.y = Math.abs(Math.sin(time * 9 + e.ph)) * 0.06;
-      } else p.y *= 0.8;
+        e.bob = Math.abs(Math.sin(time * 9 + e.ph)) * 0.06;
+      } else e.bob *= 0.8;
+      p.y = terrainHeight(p.x, p.z) + e.bob;
     }
   }
 }
@@ -201,7 +208,7 @@ export function buildNPCs(scene) {
         if (!n.g.visible) continue;
         if (!n.standing) n.a += n.w * dt;
         const x = Math.cos(n.a) * n.R, z = Math.sin(n.a) * n.R;
-        n.g.position.set(x, n.standing ? Math.sin(time * 1.6 + n.ph) * 0.015 : Math.abs(Math.sin(time * 5 + n.ph)) * 0.05, z);
+        n.g.position.set(x, terrainHeight(x, z) + (n.standing ? Math.sin(time * 1.6 + n.ph) * 0.015 : Math.abs(Math.sin(time * 5 + n.ph)) * 0.05), z);
         if (n.standing) n.g.rotation.y = Math.atan2(-x, -z);
         else { const s = Math.sign(n.w); n.g.rotation.y = Math.atan2(-Math.sin(n.a) * s, Math.cos(n.a) * s); }
         n.next -= dt;

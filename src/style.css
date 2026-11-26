@@ -228,3 +228,5 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
 .fb-ask .row { margin-top: 0; justify-content: flex-start; align-items: center; gap: 8px; }
 .fb-ask button.link { min-height: 38px; padding: 0 10px; font-size: 14px; }
 @media (max-width: 820px) { .fb-ask { left: 12px; bottom: calc(66px + env(safe-area-inset-bottom)); width: min(230px, calc(100vw - 150px)); } }
+/* narrow phones: four round buttons (view, share, sound, menu) next to the presence pill need a bit less room */
+@media (max-width: 380px) { .topright { gap: 6px; right: 10px; } .icon { width: 36px; height: 36px; } .icon svg { width: 19px; height: 19px; } }

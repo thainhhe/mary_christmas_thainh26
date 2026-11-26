@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeGlow, discTex, softTex, flakeTex, mulberry, smooth, vnoise, terrainHeight } from './textures.js';
+import { MARKET_CLEAR } from './marketlayout.js';
 
 const dummy = new THREE.Object3D();
 
@@ -12,9 +13,9 @@ export function cylinderBetween(a, b, radius, mat) {
   return m;
 }
 
-/** Instanced emissive bulbs that can twinkle. */
-export function bulbSet(positions, colorFn, radius = 0.06) {
-  const mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(radius, 8, 6), new THREE.MeshBasicMaterial({ toneMapped: false }), positions.length);
+/** Instanced emissive bulbs that can twinkle. phaseFn(i) offsets each bulb's twinkle (default: pseudo-random; a smooth ramp makes a chasing wave). */
+export function bulbSet(positions, colorFn, radius = 0.06, phaseFn = (i) => i * 1.7, segments = [8, 6]) {
+  const mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(radius, ...segments), new THREE.MeshBasicMaterial({ toneMapped: false }), positions.length);
   const cols = positions.map((_, i) => colorFn(i));
   positions.forEach((p, i) => {
     dummy.position.copy(p); dummy.scale.setScalar(1); dummy.rotation.set(0, 0, 0); dummy.updateMatrix();
@@ -26,7 +27,7 @@ export function bulbSet(positions, colorFn, radius = 0.06) {
     mesh,
     update(t, gain = 1.6, speed = 2) {
       for (let i = 0; i < cols.length; i++) {
-        const tw = 0.45 + 0.9 * (0.5 + 0.5 * Math.sin(t * speed + i * 1.7));
+        const tw = 0.45 + 0.9 * (0.5 + 0.5 * Math.sin(t * speed + phaseFn(i)));
         mesh.setColorAt(i, tmp.copy(cols[i]).multiplyScalar(tw * gain));
       }
       mesh.instanceColor.needsUpdate = true;
@@ -40,6 +41,7 @@ export const CABIN_POS = [[22, -36, 0.5], [-36, -22, -0.9], [-14, 40, 3.1]];
 export const CLEAR = [
   [FERRIS_POS.x, FERRIS_POS.z, 15], ...CABIN_POS.map(([x, z]) => [x, z, 4]),
   [44, 3, 17], [6, -60, 18], [14, -52, 7], [-11, -3, 5], [22, -38, 4], // cinema, ski run, lift, campfire, lift hut
+  ...MARKET_CLEAR, // the Christmas market and the avenue to it
 ];
 
 export function buildEnvironment(scene) {

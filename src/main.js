@@ -13,6 +13,9 @@ import { buildRoads, ROADS } from './roads.js';
 import { createWishers } from './wishers.js';
 import { createRecorder } from './recorder.js';
 import { createFollowCam } from './followcam.js';
+import { buildMarket } from './market.js';
+import { buildTrailOfLights } from './lights.js';
+import { MARKET } from './marketlayout.js';
 import { LocalPlayer, Crowd, buildNPCs } from './avatars.js';
 import { createSanta, createGifts, createFireworks } from './sky.js';
 import { say, updateBubbles } from './bubbles.js';
@@ -74,6 +77,8 @@ const envMap = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(
 const env = buildEnvironment(scene);
 const tree = buildTree(scene, envMap);
 const world2 = buildWorld2(scene);
+const market = buildMarket(scene); // the Christmas market at the end of the south-west avenue
+const trail = buildTrailOfLights(scene); // the lit avenue leading to it
 const town = buildTown(scene);
 const roads = buildRoads(scene);
 const npcs = buildNPCs(scene);
@@ -95,7 +100,7 @@ function addOrnament(o, animate = false) {
   ornaments.push(o);
   const g = tree.addWish(o, animate);
   groups.push(g);
-  world2.setWishes(ornaments);
+  world2.setWishes(ornaments); market.setWishes(ornaments);
   wishers.add(o, animate);
   npcs.setVisibleCount(Math.max(0, 8 - wishers.size)); // real wishers replace the filler NPCs
   return g;
@@ -164,7 +169,12 @@ canvas.addEventListener('pointerup', (e) => {
   if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
   setRay(e);
   const gid = pickGift();
-  if (gid) { net.send({ type: 'claim', id: gid }); return; }
+  if (gid) { // a gift is picked up by WALKING over it: a tap only sends the player there
+    if (!local.active) { toast(t('toast.giftjoin'), 3500); return; }
+    const gp = gifts.posOf(gid);
+    if (gp) local.setTarget(gp.x, gp.z);
+    return;
+  }
   const person = pickWisher();
   if (person) { showTip(person); return; }
   const w = pickWish();
@@ -205,7 +215,7 @@ const ui = initUI({
   focusWish,
   record: (opts) => { followCam?.exitNow(); recorder.start(opts); },
   recSupported: () => recorder.supported,
-  setBoard: (rows) => world2.setBoard(rows),
+  setBoard: (rows) => { world2.setBoard(rows); market.setBoard(rows); },
   capture() {
     composer.render();
     const c = document.createElement('canvas');
@@ -338,7 +348,7 @@ function tickCountdown() {
 }
 tickCountdown();
 setInterval(tickCountdown, 1000);
-onLang(() => { tickCountdown(); npcs.relabel(); world2.redraw(); });
+onLang(() => { tickCountdown(); npcs.relabel(); world2.redraw(); market.redraw(); });
 
 /* ---------- Scheduled events: Santa every 7 min, carol / quiet hour, fireworks at midnight ---------- */
 let quiet = false, lastEvent = null, lastSantaKey = '', fwDone = '';
@@ -365,7 +375,7 @@ if (params.has('fireworks')) setTimeout(() => fireworks.startShow(30), 2500);
 
 /* ---------- Minimap ---------- */
 const mm = $('minimap'), mctx = mm.getContext('2d');
-const POIS = [[-9.4, -2.2, '#ff9a4d', 'o'], [44, 3, '#8ab4ff', 's'], [6, -56, '#ffffff', 't'], [-32, -27, '#ec6ba8', 'o'], [13.5, 6.5, '#ff6b6b', 's'], [0, 0, '#3fd17c', 'tree']];
+const POIS = [[-9.4, -2.2, '#ff9a4d', 'o'], [44, 3, '#8ab4ff', 's'], [6, -56, '#ffffff', 't'], [-32, -27, '#ec6ba8', 'o'], [13.5, 6.5, '#ff6b6b', 's'], [MARKET.x, MARKET.z, '#ffd166', 's'], [0, 0, '#3fd17c', 'tree']];
 function drawMinimap() {
   const S = mm.width, C = S / 2, R = 58, sc = C / R;
   const off = camera.position.clone().sub(controls.target); off.y = 0;
@@ -517,7 +527,20 @@ if (params.has('open')) params.get('open').split(',').forEach((id, i) => setTime
 if (params.has('demo')) { me.name = 'Tester'; spawnMe({ x: 6, z: 5, shirt: me.shirt, hat: me.hat }); }
 
 const clock = new THREE.Clock();
-let lastSend = 0, wasMoving = false, mmT = 0;
+/* ---------- Gifts: walk over one to pick it up ---------- */
+const PICKUP_R = 1.3, claimAsked = new Map();
+function pickUpGifts() {
+  if (!local.g || !net.isOpen()) return;
+  const p = local.g.position, t = performance.now();
+  for (const g of gifts.list()) {
+    if (!g.landed || Math.hypot(g.x - p.x, g.z - p.z) > PICKUP_R) continue;
+    if (t - (claimAsked.get(g.id) ?? -1e9) < 2500) continue; // already asked: wait for the answer
+    claimAsked.set(g.id, t);
+    net.send({ type: 'claim', id: g.id });
+  }
+}
+
+let lastSend = 0, wasMoving = false, mmT = 0, marketWelcomed = false;
 renderer.setAnimationLoop(() => {
   const rawDt = clock.getDelta(), dt = Math.min(rawDt, 0.05), time = clock.elapsedTime;
   watchPerf(rawDt);
@@ -530,9 +553,11 @@ renderer.setAnimationLoop(() => {
   }
   recorder.update(); // moves the camera while recording
   const moved = local.update(dt, camera);
+  pickUpGifts();
   followCam.update(dt, moved); // after the avatar moved, so the camera does not lag a frame behind
   if (!recorder.active) controls.update();
   if (moved > 0) bus.emit('walk', moved);
+  if (!marketWelcomed && local.g && Math.hypot(local.g.position.x - MARKET.x, local.g.position.z - MARKET.z) < MARKET.radius - 1) { marketWelcomed = true; toast(t('toast.market'), 5000); } // once per visit
   const t0 = performance.now();
   if ((moved > 0 || wasMoving) && t0 - lastSend > 100 && local.g) {
     lastSend = t0;
@@ -542,6 +567,8 @@ renderer.setAnimationLoop(() => {
 
   if (!reduceMotion) env.update(time, dt);
   world2.update(time, dt);
+  market.update(time, dt);
+  trail.update(time);
   town.update(time);
   roads.update(time);
   npcs.update(time, dt, quiet);

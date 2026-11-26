@@ -7,6 +7,7 @@
 //  - Workers run in UTC: day boundaries and the Secret Santa draw time use a fixed offset (TZ_OFFSET, default +7).
 import { DurableObject } from 'cloudflare:workers';
 import { createHash } from 'node:crypto';
+import { clampWalk } from '../shared/walk.js'; // the same walkable area as the browser
 
 const MAX_WISHES = 500;
 const MAX_BODY = 4096;
@@ -14,9 +15,9 @@ const COOLDOWN_MS = 10_000;
 const TIERS = 8; // must match tree.js (tiers that can hold ornaments)
 const COLORS = new Set(['#ff4d6d', '#ffd166', '#4cc9f0', '#80ed99', '#c77dff', '#f1f5ff']);
 const HEX = /^#[0-9a-f]{6}$/i;
-const WALK_RADIUS = 32; // keep in sync with src/avatars.js
 const GIFT_TTL_MS = 5 * 60_000;
 const POINTS = { wish: 10, gift: 5 };
+const CLAIM_RADIUS = 3.5; // a gift is picked up by standing at it (the browser asks at 1.3; the rest allows for lag)
 const WISH_POINTS_PER_DAY = 5;
 const MAX_WS_MESSAGE = 2048;
 
@@ -290,8 +291,7 @@ export class Hub extends DurableObject {
         if (!att.player || Date.now() - (this.lastMove.get(att.pid) ?? 0) < 80) return;
         let x = Number(m.x), z = Number(m.z);
         if (!Number.isFinite(x) || !Number.isFinite(z)) return;
-        const r = Math.hypot(x, z);
-        if (r > WALK_RADIUS) { x *= WALK_RADIUS / r; z *= WALK_RADIUS / r; }
+        ({ x, z } = clampWalk(x, z));
         this.lastMove.set(att.pid, Date.now());
         att.player.x = x; att.player.z = z; save();
         this.broadcast({ type: 'move', id: att.pid, x, z }, ws);
@@ -312,9 +312,10 @@ export class Hub extends DurableObject {
         break;
       }
       case 'claim': {
-        if (!att.cid) return;
+        if (!att.cid || !att.player) return; // only a player with an avatar can walk to a gift
         const i = this.gifts.findIndex((g) => g.id === m.id);
         if (i < 0) return;
+        if (Math.hypot(att.player.x - this.gifts[i].x, att.player.z - this.gifts[i].z) > CLAIM_RADIUS) return; // not standing at it
         this.gifts.splice(i, 1); this.saveGifts();
         const total = this.addScore(att.cid, att.player?.name, POINTS.gift);
         this.send(ws, { type: 'claimed', id: m.id, points: POINTS.gift, total });

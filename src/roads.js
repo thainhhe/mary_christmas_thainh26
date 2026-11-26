@@ -10,6 +10,7 @@ export const ROADS = {
   spokeW: 2.6,                      // plaza ring -> outer ring, at the 4 compass directions
   avenueW: 2.8,                     // outer ring -> main street, every 45°
   cinemaStop: 26,                   // the east avenue ends where the cinema seats begin
+  squareStop: 41,                   // the south-west avenue (k=3, 135 deg) goes on past the main street, all the way to the Christmas market
 };
 
 const SIZE = 84;           // the road layer covers ±42 units
@@ -47,7 +48,7 @@ export function buildRoads(scene) {
   for (let k = 0; k < 4; k++) paths.push({ a: (k * Math.PI) / 2, r0: ROADS.plazaRing.r, r1: ROADS.outerRing.r, w: ROADS.spokeW });
   for (let k = 0; k < 8; k++) {
     const a = (k * Math.PI) / 4;
-    paths.push({ a, r0: ROADS.outerRing.r, r1: k === 0 ? ROADS.cinemaStop : ROADS.mainRing.r, w: ROADS.avenueW });
+    paths.push({ a, r0: ROADS.outerRing.r, r1: k === 0 ? ROADS.cinemaStop : k === 3 ? ROADS.squareStop : ROADS.mainRing.r, w: ROADS.avenueW });
   }
 
   const stroke = (extra, style, alpha = 1) => {

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createPerson, setLabel, resolveObstacles, randomWalkSpot } from './avatars.js';
 import { HATS } from './state.js';
 import { say } from './bubbles.js';
+import { terrainHeight } from './textures.js';
 
 const MAX_PEOPLE = 36;
 const hash = (s) => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -37,7 +38,7 @@ export function createWishers(scene) {
     hit.position.y = 0.95; hit.userData.group = g; // scaled with the person
     g.add(hit);
     scene.add(g);
-    e = { key, g, hit, name, color: o.color, wishes: [o], target: randomWalkSpot(), wait: 0, speed: 1.1 + (hash(key) % 100) / 100, born: animate ? performance.now() : -1, ph: Math.random() * 6 };
+    e = { key, g, hit, name, color: o.color, wishes: [o], target: randomWalkSpot(), wait: 0, bob: 0, speed: 1.1 + (hash(key) % 100) / 100, born: animate ? performance.now() : -1, ph: Math.random() * 6 };
     g.userData.wisher = e;
     if (animate) g.scale.setScalar(0.01);
     people.set(key, e);
@@ -83,7 +84,7 @@ export function createWishers(scene) {
         }
         if (e.wait > 0) {
           e.wait -= dt;
-          p.y *= 0.8;
+          e.bob *= 0.8; p.y = terrainHeight(p.x, p.z) + e.bob;
           if (e.wait <= 0) e.target = randomWalkSpot();
           continue;
         }
@@ -93,7 +94,8 @@ export function createWishers(scene) {
         p.x += (dx / d) * step; p.z += (dz / d) * step;
         resolveObstacles(p);
         g.rotation.y += wrap(Math.atan2(dx, dz) - g.rotation.y) * 0.15;
-        p.y = Math.abs(Math.sin(time * 6 + e.ph)) * 0.05;
+        e.bob = Math.abs(Math.sin(time * 6 + e.ph)) * 0.05;
+        p.y = terrainHeight(p.x, p.z) + e.bob; // the ground rises towards the ski slope
       }
       // One person speaks at a time, every few seconds, so the screen never fills with bubbles.
       nextTalk -= dt;

@@ -8,6 +8,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { collect, feedback, stats } from './analytics/index.js';
+import { clampWalk } from '../shared/walk.js'; // the same walkable area as the browser
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.join(ROOT, 'data');
@@ -22,10 +23,10 @@ const COOLDOWN_MS = 10_000;
 const TIERS = 8; // must match tree.js (tiers that can hold ornaments)
 const COLORS = new Set(['#ff4d6d', '#ffd166', '#4cc9f0', '#80ed99', '#c77dff', '#f1f5ff']);
 const HEX = /^#[0-9a-f]{6}$/i;
-const WALK_RADIUS = 32; // keep in sync with src/avatars.js
 const GIFT_EVERY_MS = Number(process.env.GIFT_EVERY_MS) || 90_000;
 const GIFT_TTL_MS = 5 * 60_000;
 const POINTS = { wish: 10, gift: 5 };
+const CLAIM_RADIUS = 3.5; // a gift is picked up by standing at it (the browser asks at 1.3; the rest allows for lag)
 const WISH_POINTS_PER_DAY = 5; // wishes per day that still earn points
 
 /* ---------- JSON persistence (serialised + atomic per file) ---------- */
@@ -179,8 +180,7 @@ function handle(ws, m) {
       if (!ws.player || Date.now() - ws.lastMove < 80) return;
       let x = Number(m.x), z = Number(m.z);
       if (!Number.isFinite(x) || !Number.isFinite(z)) return;
-      const r = Math.hypot(x, z);
-      if (r > WALK_RADIUS) { x *= WALK_RADIUS / r; z *= WALK_RADIUS / r; }
+      ({ x, z } = clampWalk(x, z));
       ws.lastMove = Date.now();
       ws.player.x = x; ws.player.z = z;
       broadcast({ type: 'move', id: ws.pid, x, z }, ws);
@@ -200,9 +200,10 @@ function handle(ws, m) {
       break;
     }
     case 'claim': {
-      if (!ws.cid) return;
+      if (!ws.cid || !ws.player) return; // only a player with an avatar can walk to a gift
       const i = gifts.findIndex((g) => g.id === m.id);
       if (i < 0) return;
+      if (Math.hypot(ws.player.x - gifts[i].x, ws.player.z - gifts[i].z) > CLAIM_RADIUS) return; // not standing at it
       gifts.splice(i, 1);
       const total = addScore(ws.cid, ws.player?.name, POINTS.gift);
       send(ws, { type: 'claimed', id: m.id, points: POINTS.gift, total });

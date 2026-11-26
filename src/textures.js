@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SQUARE } from '../shared/walk.js';
 
 export function glowTexture(stops, size = 128) {
   const c = document.createElement('canvas');
@@ -51,5 +52,6 @@ export function vnoise(x, y) {
 export function terrainHeight(x, z) {
   const d = Math.hypot(x, z);
   const hill = 20 * Math.exp(-(((x - 6) ** 2) / (2 * 13 * 13) + ((z + 62) ** 2) / (2 * 14 * 14))); // ski slope, far behind the tree
-  return smooth(38, 82, d) * (2 + 9 * vnoise(x * 0.045 + 10, z * 0.045)) + 0.1 * vnoise(x * 0.6, z * 0.6) * smooth(8, 20, d) + hill;
+  const flat = smooth(12, 20, Math.hypot(x - SQUARE.x, z - SQUARE.z)); // level ground under the Christmas market, easing into the hills
+  return flat * (smooth(38, 82, d) * (2 + 9 * vnoise(x * 0.045 + 10, z * 0.045)) + 0.1 * vnoise(x * 0.6, z * 0.6) * smooth(8, 20, d) + hill);
 }

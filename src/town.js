@@ -33,6 +33,28 @@ export function buildTown(scene) {
   const lit = new THREE.Color(2.6, 1.7, 0.7), dim = new THREE.Color(0.25, 0.28, 0.4), tmp = new THREE.Color();
   const world = new THREE.Matrix4(), root = new THREE.Matrix4(), one = new THREE.Vector3();
   const hs = []; // per-house data so a house can shrink away when it blocks the camera
+
+  /* ---- Christmas lights on the houses (Dyker Heights style): roof edges, roof ridges, a star, a lit fir in some yards ---- */
+  const lightPts = [], lightLook = [], starPts = [], yardTrees = [];
+  const LIGHT_STYLES = [
+    [new THREE.Color(3, 0.5, 0.55), new THREE.Color(0.6, 2.4, 0.9), new THREE.Color(0.8, 1.5, 3), new THREE.Color(3, 2.3, 0.6), new THREE.Color(3, 0.9, 1.8)], // multicolour
+    [new THREE.Color(3, 2.2, 1.0)],                                                                                                                          // warm white
+    [new THREE.Color(3, 0.4, 0.45), new THREE.Color(0.5, 2.4, 0.8)],                                                                                          // red / green
+    [new THREE.Color(1.1, 1.8, 3), new THREE.Color(3, 3, 3)],                                                                                                 // icy blue / white
+  ];
+  function addHouseLights(s, rh, pos, quat) {
+    const style = (rnd() * LIGHT_STYLES.length) | 0, y = s.h - 0.02;
+    const hx = s.w * 0.566, hz = s.d * 0.601, apexY = s.h + 0.55 + rh / 2;
+    const P = (x, yy, z) => new THREE.Vector3(x, yy, z).applyQuaternion(quat).add(pos);
+    const push = (p, k) => { lightPts.push(p); lightLook.push([style, k]); };
+    let k = 0;
+    const nF = Math.max(3, Math.round((hx * 2) / 0.7)), nS = Math.max(2, Math.round((hz * 2) / 0.7));
+    for (let q = 0; q <= nF; q++) push(P(-hx + (q * 2 * hx) / nF, y, hz), k++);                    // front roof edge
+    for (const sx of [-1, 1]) for (let q = 1; q < nS; q++) push(P(sx * hx, y, hz - (q * 2 * hz) / nS), k++); // the two side edges
+    for (const [cx, cz] of [[-hx, hz], [hx, hz], [-hx, -hz], [hx, -hz]]) for (let q = 1; q <= 3; q++) { const f = q / 4; push(P(cx * (1 - f), y + (apexY - y) * f, cz * (1 - f)), k++); } // ridges up to the tip
+    if (rnd() < 0.45) starPts.push(P(0, apexY + 0.18, 0));
+    if (rnd() < 0.35) yardTrees.push(P(s.w * (rnd() < 0.5 ? -0.3 : 0.3), 0, s.d / 2 + 1.1));
+  }
   spots.forEach((s, i) => {
     const y = terrainHeight(s.x, s.z);
     const pos = new THREE.Vector3(s.x, y, s.z), quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, s.ry, 0));
@@ -40,7 +62,9 @@ export function buildTown(scene) {
     const put = (mesh, idx, p, scale) => parts.push({ mesh, idx, m: new THREE.Matrix4().compose(p, new THREE.Quaternion(), scale) });
     hs.push({ pos, quat, parts, center: new THREE.Vector3(s.x, y + s.h / 2 + 1, s.z), f: 1, applied: 1 });
     put(bodies, i, new THREE.Vector3(0, s.h / 2, 0), new THREE.Vector3(s.w, s.h, s.d));
-    put(roofs, i, new THREE.Vector3(0, s.h + 0.55, 0), new THREE.Vector3(s.w * 0.8, 1.1 + rnd() * 0.3, s.d * 0.85));
+    const rh = 1.1 + rnd() * 0.3; // roof height
+    put(roofs, i, new THREE.Vector3(0, s.h + 0.55, 0), new THREE.Vector3(s.w * 0.8, rh, s.d * 0.85));
+    addHouseLights(s, rh, pos, quat);
     put(chimneys, i, new THREE.Vector3(s.w * 0.28, s.h + 0.9, -s.d * 0.15), new THREE.Vector3(1, 1, 1));
     for (const [k, wx] of [[0, -0.27], [1, 0.27]]) put(wins, i * 2 + k, new THREE.Vector3(s.w * wx, s.h * 0.58, s.d / 2 + 0.02), new THREE.Vector3(1, 1, 1));
     bodies.setColorAt(i, tmp.copy(walls[(rnd() * walls.length) | 0]));
@@ -52,6 +76,24 @@ export function buildTown(scene) {
   }
   hs.forEach((h) => writeHouse(h, 1));
   scene.add(bodies, roofs, chimneys, wins);
+
+  // lit yard firs: a small cone + a spiral of bulbs
+  if (yardTrees.length) {
+    const yt = new THREE.InstancedMesh(new THREE.ConeGeometry(0.5, 1.7, 6), new THREE.MeshStandardMaterial({ color: '#17402d', roughness: 0.9 }), yardTrees.length);
+    yardTrees.forEach((p, i) => {
+      const y0 = terrainHeight(p.x, p.z);
+      dm.position.set(p.x, y0 + 0.85, p.z); dm.rotation.set(0, 0, 0); dm.scale.setScalar(1); dm.updateMatrix(); yt.setMatrixAt(i, dm.matrix);
+      for (let k = 0; k < 6; k++) { const a = k * 2.4 + i, h = 0.15 + (k / 6) * 1.4, rad = 0.46 * (1 - h / 1.8); lightPts.push(new THREE.Vector3(p.x + Math.cos(a) * rad, y0 + h, p.z + Math.sin(a) * rad)); lightLook.push([0, k]); }
+    });
+    scene.add(yt);
+  }
+  const houseBulbs = bulbSet(lightPts, (i) => { const [st, k] = lightLook[i], c = LIGHT_STYLES[st]; return c[k % c.length]; }, 0.075, (i) => i * 1.7, [5, 3]);
+  scene.add(houseBulbs.mesh);
+  if (starPts.length) {
+    const stars = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 2.2, 0.6), toneMapped: false }), starPts.length);
+    starPts.forEach((p, i) => { dm.position.copy(p); dm.rotation.set(0, i, 0); dm.scale.set(1, 1.4, 1); dm.updateMatrix(); stars.setMatrixAt(i, dm.matrix); });
+    scene.add(stars);
+  }
 
   /* ---- Street lamps along the ring road ---- */
   const LAMPS = 30, heads = [], poles = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.06, 0.09, 3, 6), new THREE.MeshStandardMaterial({ color: '#171c28', roughness: 0.6, metalness: 0.5 }), LAMPS);
@@ -66,8 +108,9 @@ export function buildTown(scene) {
   scene.add(lampBulbs.mesh);
   heads.forEach((p, i) => { if (i % 2 === 0) { const g = makeGlow(new THREE.Color(1.1, 0.7, 0.3), 3.2, 3.2, 0.35); g.position.copy(p); scene.add(g); } });
 
+  let lightFrame = 0;
   return {
-    update(t) { lampBulbs.update(t, 2.2, 1.4); },
+    update(t) { lampBulbs.update(t, 2.2, 1.4); if ((lightFrame++ & 3) === 0) houseBulbs.update(t, 1.5, 2.0); }, // house lights twinkle at ~15 fps (thousands of bulbs)
     houses: N,
   };
 }
