@@ -7,7 +7,7 @@ import { getStore } from './store.js';
 import { COOKIE, clearCookie, isAuthed, isProd, makeCookie, secret, usingDefaultCredentials, verifyLogin } from './auth.js';
 import { dashboardPage, loginPage } from './pages.js';
 
-export const EVENTS = ['join', 'wish', 'gift', 'chat', 'photo', 'video_start', 'video_done', 'share', 'santa_join', 'mission_claim', 'lang_switch', 'feedback_open', 'feedback_sent'];
+export const EVENTS = ['join', 'wish', 'gift', 'chat', 'photo', 'video_start', 'video_done', 'share', 'santa_join', 'mission_claim', 'lang_switch', 'feedback_open', 'feedback_sent', 'tarot_open', 'tarot_shuffle', 'tarot_read', 'tarot_again'];
 const EVENT_SET = new Set(EVENTS);
 const TZ_HOURS = Number(process.env.STATS_TZ_OFFSET ?? 7); // days roll over at midnight Vietnam time
 

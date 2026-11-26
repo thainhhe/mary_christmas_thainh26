@@ -25,6 +25,9 @@ import { $, me, store, bus, toast } from './state.js';
 import { t, apply, onLang } from './i18n.js';
 import { now, params, activeEvent, santaSlot, santaSlotAge } from './clock.js';
 import { initUI } from './ui.js';
+import { initMinigames } from './minigames.js';
+import { buildTarot, initTarot } from './tarot.js';
+import { TAROT } from './tarotlayout.js';
 import { initAnalytics } from './analytics.js';
 
 const STORAGE_KEY = 'noel.ornaments.v2';
@@ -77,6 +80,7 @@ const envMap = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(
 const env = buildEnvironment(scene);
 const tree = buildTree(scene, envMap);
 const world2 = buildWorld2(scene);
+const tarotCaravan = buildTarot(scene); // the tarot caravan next to the blue-scarf snowman
 const market = buildMarket(scene); // the Christmas market at the end of the south-west avenue
 const trail = buildTrailOfLights(scene); // the lit avenue leading to it
 const town = buildTown(scene);
@@ -245,6 +249,8 @@ const ui = initUI({
   },
 });
 ui.setPresence(null);
+const tarot = initTarot({ getPlayer: () => local.g?.position }); // the Tarot button at the caravan
+const minigames = initMinigames({ getPlayer: () => local.g?.position }); // the Play button at the market stalls
 
 /* ---------- Video recording (vertical 9:16) ---------- */
 let recSize = null; // while recording, the renderer is resized to the video size
@@ -375,9 +381,9 @@ if (params.has('fireworks')) setTimeout(() => fireworks.startShow(30), 2500);
 
 /* ---------- Minimap ---------- */
 const mm = $('minimap'), mctx = mm.getContext('2d');
-const POIS = [[-9.4, -2.2, '#ff9a4d', 'o'], [44, 3, '#8ab4ff', 's'], [6, -56, '#ffffff', 't'], [-32, -27, '#ec6ba8', 'o'], [13.5, 6.5, '#ff6b6b', 's'], [MARKET.x, MARKET.z, '#ffd166', 's'], [0, 0, '#3fd17c', 'tree']];
+const POIS = [[-9.4, -2.2, '#ff9a4d', 'o'], [44, 3, '#8ab4ff', 's'], [6, -56, '#ffffff', 't'], [-32, -27, '#ec6ba8', 'o'], [13.5, 6.5, '#ff6b6b', 's'], [MARKET.x, MARKET.z, '#ffd166', 's'], [TAROT.x, TAROT.z, '#c77dff', 's'], [0, 0, '#3fd17c', 'tree']];
 function drawMinimap() {
-  const S = mm.width, C = S / 2, R = 58, sc = C / R;
+  const S = mm.width, C = S / 2, R = 78, sc = C / R; // the Christmas market's far edge is ~86 out; its middle (63) must stay on the map
   const off = camera.position.clone().sub(controls.target); off.y = 0;
   const f = off.lengthSq() ? off.negate().normalize() : new THREE.Vector3(0, 0, -1);
   const rx = -f.z, rz = f.x;
@@ -568,6 +574,9 @@ renderer.setAnimationLoop(() => {
   if (!reduceMotion) env.update(time, dt);
   world2.update(time, dt);
   market.update(time, dt);
+  minigames.update();
+  tarot.update();
+  tarotCaravan.update(time);
   trail.update(time);
   town.update(time);
   roads.update(time);

@@ -43,6 +43,10 @@ export function captureStream() {
   if (!dest) { dest = ctx.createMediaStreamDestination(); master.connect(dest); }
   return dest.stream;
 }
+/** A short blip for the mini-games (only while the music is on). */
+export function blip(freq = 880, dur = 0.1, gain = 0.6) {
+  if (ctx) tone(freq, ctx.currentTime, dur, gain);
+}
 export function chime() {
   if (!ctx) return;
   const t = ctx.currentTime;

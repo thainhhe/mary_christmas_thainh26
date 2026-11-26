@@ -4,11 +4,12 @@ import { t } from './i18n.js';
 import { say } from './bubbles.js';
 import { WALK_RADIUS, clampWalk } from '../shared/walk.js';
 import { MARKET_OBSTACLES } from './marketlayout.js';
+import { TAROT_OBSTACLES } from './tarotlayout.js';
 
 export { WALK_RADIUS }; // the plaza + meadow (NPCs and wishing characters stay in it; players may also go to the Christmas market, see clampWalk)
 const TREE_CLEAR = 4.5; // keep avatars off the tree + presents
 // Solid props on the ground: [x, z, radius]. Walkers are pushed out of them.
-const OBSTACLES = [[-36, -22, 2.6], [22, -36, 2.6], [-14, 40, 2.6], [-12.2, -4, 2.2], [-7.2, -7.4, 2.2], [13.5, 6.5, 2.0], [9, 9.5, 0.9], [-9.4, -2.2, 1.1], ...MARKET_OBSTACLES];
+const OBSTACLES = [[-36, -22, 2.6], [22, -36, 2.6], [-14, 40, 2.6], [-12.2, -4, 2.2], [-7.2, -7.4, 2.2], [13.5, 6.5, 2.0], [9, 9.5, 0.9], [-9.4, -2.2, 1.1], ...MARKET_OBSTACLES, ...TAROT_OBSTACLES];
 export function resolveObstacles(p) {
   const r = Math.hypot(p.x, p.z);
   if (r < TREE_CLEAR) { const m = TREE_CLEAR / (r || 1); p.x *= m; p.z *= m; }
@@ -92,7 +93,7 @@ export class LocalPlayer {
     this.scene = scene; this.g = null; this.target = null; this.keys = new Set(); this.phase = 0;
     this.joy = { x: 0, y: 0 }; // on-screen joystick, each axis -1..1
     this.stuck = 0; // consecutive frames spent pushing against an obstacle on the way to the target
-    addEventListener('keydown', (e) => { if (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) this.keys.add(e.code); });
+    addEventListener('keydown', (e) => { if (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName) && !document.querySelector('dialog[open]')) this.keys.add(e.code); }); // no walking while a dialog (or a mini-game) is open
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
   }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { makeGlow, softTex, terrainHeight, mulberry } from './textures.js';
 import { bulbSet } from './env.js';
-import { MARKET, BUILDINGS, STALLS, SLEIGHS, NUTCRACKERS, GATE, PYRAMID, MARKET_OBSTACLES, marketWorld } from './marketlayout.js';
+import { MARKET, BUILDINGS, STALLS, STALL_GAMES, SLEIGHS, NUTCRACKERS, TREES, GATE, PYRAMID, LOCAL_OBSTACLES } from './marketlayout.js';
 import { createPerson } from './avatars.js';
 import { SHIRTS, HATS } from './state.js';
 import { t } from './i18n.js';
@@ -116,19 +116,20 @@ export function buildMarket(scene) {
 
   /* ---------- Ground: cobbles, a warm ring, snow at the edge ---------- */
   {
-    const S = 512, g = canvasTex(S, S), c = g.ctx;
+    const R = MARKET.radius + 1.0, S = 1024, u = S / (2 * R), g = canvasTex(S, S), c = g.ctx; // u = canvas pixels per world unit
     c.fillStyle = '#2b2733'; c.fillRect(0, 0, S, S);
     const tileC = document.createElement('canvas'); tileC.width = tileC.height = 32; const tg = tileC.getContext('2d');
     tg.fillStyle = '#2b2733'; tg.fillRect(0, 0, 32, 32);
     for (let r = 0; r < 4; r++) for (let q = -1; q < 3; q++) { tg.fillStyle = `hsl(${28 + Math.round(rnd() * 10)},${10 + Math.round(rnd() * 8)}%,${34 + Math.round(rnd() * 14)}%)`; tg.beginPath(); tg.roundRect(q * 16 + (r % 2 ? 8 : 0) + 1, r * 8 + 1, 14, 6, 2); tg.fill(); }
     c.fillStyle = c.createPattern(tileC, 'repeat'); c.fillRect(0, 0, S, S);
-    c.strokeStyle = 'rgba(255,214,150,.35)'; c.lineWidth = 10; c.beginPath(); c.arc(S / 2, S / 2, S * 0.16, 0, Math.PI * 2); c.stroke(); // ring round the pyramid
-    c.beginPath(); c.arc(S / 2, S / 2, S * 0.34, 0, Math.PI * 2); c.lineWidth = 4; c.stroke();
-    for (let i = 0; i < 46; i++) { // snow drifts creeping in from the edge
-      const a = rnd() * Math.PI * 2, r = S * (0.42 + rnd() * 0.08), x = S / 2 + Math.cos(a) * r, y = S / 2 + Math.sin(a) * r, rr = 18 + rnd() * 34;
+    c.strokeStyle = 'rgba(255,214,150,.35)'; c.lineWidth = 0.3 * u; c.beginPath(); c.arc(S / 2, S / 2, 4.3 * u, 0, Math.PI * 2); c.stroke(); // ring round the pyramid
+    c.beginPath(); c.arc(S / 2, S / 2, 9.8 * u, 0, Math.PI * 2); c.lineWidth = 0.12 * u; c.stroke();                                          // path between the firs and the stalls
+    c.beginPath(); c.arc(S / 2, S / 2, 15.6 * u, 0, Math.PI * 2); c.stroke();                                                                   // path in front of the houses
+    for (let i = 0; i < 70; i++) { // snow drifts creeping in from the edge
+      const a = rnd() * Math.PI * 2, r = (19.6 + rnd() * 3.4) * u, x = S / 2 + Math.cos(a) * r, y = S / 2 + Math.sin(a) * r, rr = (0.9 + rnd() * 1.7) * u;
       const gr = c.createRadialGradient(x, y, 0, x, y, rr); gr.addColorStop(0, 'rgba(240,246,255,.9)'); gr.addColorStop(1, 'rgba(240,246,255,0)'); c.fillStyle = gr; c.fillRect(x - rr, y - rr, rr * 2, rr * 2);
     }
-    const geo = new THREE.CircleGeometry(MARKET.radius + 1.0, 64); geo.rotateX(-Math.PI / 2);
+    const geo = new THREE.CircleGeometry(R, 96); geo.rotateX(-Math.PI / 2);
     const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: g.tex, roughness: 0.75, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
     mesh.position.y = 0.12; mesh.renderOrder = 2; root.add(mesh);
     const pool = (x, z, size, col, op) => { // soft warm light on the stones, in place of real lights (cheaper)
@@ -136,9 +137,9 @@ export function buildMarket(scene) {
       m.rotation.x = -Math.PI / 2; m.position.set(x, 0.2, z); m.renderOrder = 3; root.add(m);
     };
     const amber = new THREE.Color(1.7, 0.95, 0.35);
-    pool(PYRAMID.x, PYRAMID.z, 8, amber, 0.55);
-    for (const [x, z] of STALLS) pool(x, z + 0.8, 5, amber, 0.4);
-    pool(0, 8.2, 7, new THREE.Color(1.5, 1.1, 0.5), 0.35);
+    pool(PYRAMID.x, PYRAMID.z, 10, amber, 0.55);
+    for (const [x, z] of STALLS) { const a = faceCenter(x, z); pool(x + Math.sin(a) * 0.8, z + Math.cos(a) * 0.8, 5, amber, 0.4); } // in front of each stall
+    pool(0, 17, 9, new THREE.Color(1.5, 1.1, 0.5), 0.35);
   }
 
   /* ---------- Roofs ---------- */
@@ -166,6 +167,10 @@ export function buildMarket(scene) {
     ne:   { wall: '#e8b8a0', shutter: '#6b3a8a', rows: 2, cols: 2, icing: true },
     nw:   { wall: '#d6e0b8', shutter: '#b34a2a', rows: 2, cols: 2 },
     clock:{ wall: '#e1cfa2', shutter: '#2f4f7a', rows: 4, cols: 2 },
+    inn:  { wall: '#e9dcc0', shutter: '#7a2f2f', rows: 2, cols: 3 },
+    cafe: { wall: '#cfd9ea', shutter: '#3a6a5a', rows: 2, cols: 3 },
+    toy:  { wall: '#f0d3a8', shutter: '#2f6fb0', rows: 2, cols: 2, icing: true },
+    bakery: { wall: '#ecc9c0', shutter: '#8a5a2a', rows: 2, cols: 2 },
   };
   const group = {};
   function house(b) {
@@ -266,6 +271,10 @@ export function buildMarket(scene) {
   }
   sign('ne', 'LEBKUCHEN', '★ gingerbread · bánh gừng ★', bmap.ne.h - 0.9, 3.4, '#5a2a1e', '#ffe9c4');
   sign('nw', 'GLÜHWEIN', '★ mulled wine · rượu nóng ★', bmap.nw.h - 0.9, 3.4, '#4a1d2a', '#ffd9a0');
+  sign('inn', 'GASTHAUS', '★ inn · quán trọ ★', bmap.inn.h - 1.0, 3.8, '#3a2a1a', '#ffe0a8');
+  sign('cafe', 'KAFFEEHAUS', '★ coffee & cocoa · cà phê, ca cao ★', bmap.cafe.h - 1.0, 3.8, '#2c3a30', '#f2e6c8');
+  sign('toy', 'SPIELWAREN', '★ toys · đồ chơi ★', bmap.toy.h - 0.9, 3.5, '#1f3a5a', '#ffe9c4');
+  sign('bakery', 'BÄCKEREI', '★ bakery · tiệm bánh ★', bmap.bakery.h - 0.9, 3.5, '#5a3a1e', '#fff0d0');
 
   /* ---------- Clock tower ---------- */
   const star = new THREE.Group();
@@ -339,6 +348,21 @@ export function buildMarket(scene) {
   }
 
   /* ---------- Stalls ---------- */
+  const GAME_SIGNS = { // [title, subtitle, background, text colour] for the stalls that have a mini-game
+    rings: ['RINGWURF', '★ ném vòng · ring toss ★', '#4a1d2a', '#ffe0a8'],
+    balloons: ['BALLONS', '★ bắn bóng · balloon pop ★', '#1f3a5a', '#ffe9c4'],
+    snow: ['SCHNEEBALL', '★ ném tuyết · snowballs ★', '#2c3a30', '#f2e6c8'],
+    fishing: ['ANGELN', '★ câu quà · gift fishing ★', '#3a2a1a', '#ffe0a8'],
+    catch: ['GESCHENKE', '★ hứng quà · catch gifts ★', '#4a2c18', '#ffe9a8'],
+    whack: ['SCHNEEMANN', '★ đập người tuyết · whack ★', '#1f3a4a', '#e8f4ff'],
+    memory: ['MEMORY', '★ lật thẻ · card match ★', '#4a1d2a', '#ffd9a0'],
+    archery: ['BOGEN', '★ bắn cung · archery ★', '#2c3a30', '#f2e6c8'],
+    cups: ['HÜTCHEN', '★ quà ở đâu · find the gift ★', '#5a2a1e', '#ffe9c4'],
+    plinko: ['KUGELBAHN', '★ thả bi · plinko ★', '#2a2a4a', '#ffe0a8'],
+    bells: ['GLOCKEN', '★ gõ chuông · bell rhythm ★', '#3a2a1a', '#fff0c8'],
+    tower: ['TURMBAU', '★ xếp bánh · gingerbread tower ★', '#5a3a1e', '#fff0d0'],
+  };
+  const keepers = []; // one stallholder per stall
   {
     const roofMat = std('#ffffff', 0.8, { map: STRIPE });
     const goodsCols = ['#c8283c', '#2f8f4e', '#e8b84a', '#4a7fd0', '#a855f7'];
@@ -360,6 +384,19 @@ export function buildMarket(scene) {
         const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 1.9, 0.8), toneMapped: false })); lamp.position.set(lx, 2.05, 0.9); g.add(lamp);
         const gl = makeGlow(new THREE.Color(1.5, 0.85, 0.3), 1.8, 1.8, 0.6); gl.position.copy(lamp.position); g.add(gl);
       }
+      if (STALL_GAMES[si]) { // a game stall: a lit sign on two posts above the awning
+        const [title, sub, bg, fg] = GAME_SIGNS[STALL_GAMES[si]], sg = canvasTex(360, 120), sc = sg.ctx;
+        sc.fillStyle = bg; sc.fillRect(0, 0, 360, 120); sc.strokeStyle = fg; sc.lineWidth = 6; sc.strokeRect(8, 8, 344, 104);
+        sc.textAlign = 'center'; sc.textBaseline = 'middle'; sc.fillStyle = fg; const fit = (str, size, weight) => { let n = size; sc.font = weight + ' ' + n + 'px "Times New Roman", Times, serif'; while (sc.measureText(str).width > 326 && n > 12) { n -= 1; sc.font = weight + ' ' + n + 'px "Times New Roman", Times, serif'; } }; // shrink long names to fit the plank
+        fit(title, 46, 800); sc.fillText(title, 180, 50); fit(sub, 20, 600); sc.fillText(sub, 180, 92);
+        const plank = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 0.83), new THREE.MeshStandardMaterial({ map: sg.tex, emissive: '#ffffff', emissiveMap: sg.tex, emissiveIntensity: 0.65 })); plank.position.set(0, 3.25, 0.5); g.add(plank);
+        for (const px of [-1.05, 1.05]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.2, 0.07), darkWood); post.position.set(px, 2.95, 0.46); g.add(post); }
+        const gl = makeGlow(new THREE.Color(1.6, 1.0, 0.4), 3.4, 2.0, 0.5); gl.position.set(0, 3.25, 0.9); g.add(gl);
+      }
+      // the stallholder: stands behind the counter, facing the customers
+      const keeper = createPerson({ shirt: SHIRTS[(si * 3 + 1) % SHIRTS.length], hat: HATS[(si * 5 + 2) % HATS.length], name: '', npc: true });
+      keeper.userData.label.visible = false; keeper.position.set(0, 0.1, -0.2); g.add(keeper);
+      keepers.push({ g: keeper, phase: rnd() * 6.28 });
       root.add(g);
     });
   }
@@ -448,16 +485,30 @@ export function buildMarket(scene) {
     updaters.push((time, dt) => { mini.rotation.y += dt * 1.2; });
   }
 
+  /* ---------- Lit firs between the pyramid and the stalls ---------- */
+  {
+    const fir = std('#17402d', 0.9), cap = std('#eef4ff', 0.9), trunk = std('#3b2a1e', 0.9);
+    TREES.forEach(([x, z], ti) => {
+      const g = new THREE.Group(); g.position.set(x, 0.1, z); root.add(g);
+      const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.5, 6), trunk); tr.position.y = 0.25; g.add(tr);
+      [[0.95, 1.5, 0.9], [0.72, 1.3, 1.65], [0.48, 1.1, 2.3]].forEach(([r, h, y]) => { const c = new THREE.Mesh(new THREE.ConeGeometry(r, h, 8), fir); c.position.y = y; g.add(c); const s = new THREE.Mesh(new THREE.ConeGeometry(r * 0.62, h * 0.5, 8), cap); s.position.y = y + h * 0.22; g.add(s); });
+      const tip = new THREE.Mesh(new THREE.OctahedronGeometry(0.16), new THREE.MeshBasicMaterial({ color: GOLD, toneMapped: false })); tip.position.y = 3.15; g.add(tip);
+      const gl = makeGlow(new THREE.Color(1.5, 0.95, 0.4), 3.4, 3.4, 0.35); gl.position.y = 1.7; g.add(gl);
+      for (let k = 0; k < 14; k++) { const h = 0.7 + (k / 14) * 2.2, a = k * 2.4 + ti, rad = 0.95 * (1 - (h - 0.7) / 2.6) + 0.06; lights.push(new THREE.Vector3(x + Math.cos(a) * rad, 0.1 + h, z + Math.sin(a) * rad)); }
+    });
+  }
+
   /* ---------- Strings of lights ---------- */
   {
     const cornerNear = (b, other, y) => { const pts = [-1, 1].map((sx) => bpt(b, (sx * b.w) / 2, y, b.d / 2)); return pts.sort((p, q) => p.distanceTo(other) - q.distanceTo(other))[0]; };
     const centre = (b) => new THREE.Vector3(b.x, 0, b.z);
+    const eave = (b) => (b.id === 'clock' ? b.h + 0.3 : b.h);
     const post = (sx) => new THREE.Vector3(sx * GATE.halfWidth, 3.6, GATE.z);
+    const link = (a, b) => [cornerNear(a, centre(b), eave(a)), cornerNear(b, centre(a), eave(b))];
+    // the houses in a ring from the north-west round to the north-east; the way in from the gate stays open
+    const ring = ['nw', 'bakery', 'west', 'cafe', 'clock', 'inn', 'east', 'toy', 'ne'].map((id) => bmap[id]);
     const pairs = [
-      [cornerNear(bmap.clock, centre(bmap.west), bmap.clock.h + 0.3), cornerNear(bmap.west, centre(bmap.clock), bmap.west.h)],
-      [cornerNear(bmap.clock, centre(bmap.east), bmap.clock.h + 0.3), cornerNear(bmap.east, centre(bmap.clock), bmap.east.h)],
-      [cornerNear(bmap.east, centre(bmap.ne), bmap.east.h), cornerNear(bmap.ne, centre(bmap.east), bmap.ne.h)],
-      [cornerNear(bmap.west, centre(bmap.nw), bmap.west.h), cornerNear(bmap.nw, centre(bmap.west), bmap.nw.h)],
+      ...ring.slice(1).map((b, i) => link(ring[i], b)),
       [cornerNear(bmap.ne, post(1), bmap.ne.h), post(1)],
       [cornerNear(bmap.nw, post(-1), bmap.nw.h), post(-1)],
       [post(-1), post(1)],
@@ -472,20 +523,38 @@ export function buildMarket(scene) {
     let f = 0; updaters.push((time) => { if ((f++ % 3) === 0) bulbs.update(time, 1.5, 2.4); });
   }
 
-  /* ---------- Visitors ---------- */
+  /* ---------- People: a stallholder at every stall + 5 villagers strolling round the square ---------- */
   {
-    const spots = []; let tries = 0;
-    while (spots.length < 11 && tries++ < 500) {
-      const a = rnd() * Math.PI * 2, r = 1.2 + rnd() * 7.4, x = Math.cos(a) * r, z = Math.sin(a) * r, [wx, wz] = marketWorld(x, z);
-      if (MARKET_OBSTACLES.some(([ox, oz, or]) => Math.hypot(wx - ox, wz - oz) < or + 0.7) || spots.some((s) => Math.hypot(s[0] - x, s[1] - z) < 1.3)) continue;
-      spots.push([x, z]);
-    }
-    const people = spots.map(([x, z]) => {
-      const p = createPerson({ shirt: SHIRTS[Math.floor(rnd() * SHIRTS.length)], hat: HATS[Math.floor(rnd() * HATS.length)], name: '', npc: true });
-      p.userData.label.visible = false; p.position.set(x, 0.1, z); p.rotation.y = Math.atan2(-x, -z) + Math.PI + (rnd() - 0.5) * 1.8; root.add(p);
-      return { g: p, phase: rnd() * 6.28 };
+    updaters.push((time) => keepers.forEach((k) => { k.g.position.y = 0.1 + Math.max(0, Math.sin(time * 1.6 + k.phase)) * 0.03; }));
+
+    const LIMIT = MARKET.radius - 2.5, MARGIN = 0.9, WALKERS = 5;
+    const blocked = (x, z, m) => Math.hypot(x, z) > LIMIT || LOCAL_OBSTACLES.some(([ox, oz, or]) => Math.hypot(x - ox, z - oz) < or + m);
+    const pickSpot = () => { for (let i = 0; i < 60; i++) { const a = rnd() * Math.PI * 2, r = 2 + rnd() * (LIMIT - 2), x = Math.cos(a) * r, z = Math.sin(a) * r; if (!blocked(x, z, MARGIN + 0.3)) return [x, z]; } return [0, 5]; };
+    const walkers = Array.from({ length: WALKERS }, (_, i) => {
+      const p = createPerson({ shirt: SHIRTS[(i * 2 + 4) % SHIRTS.length], hat: HATS[(i * 3 + 1) % HATS.length], name: '', npc: true });
+      const [x, z] = pickSpot(), [tx, tz] = pickSpot();
+      p.userData.label.visible = false; p.position.set(x, 0.1, z); root.add(p);
+      return { g: p, tx, tz, wait: rnd() * 3, speed: 1.0 + rnd() * 0.6, phase: rnd() * 6.28, stuck: 0 };
     });
-    updaters.push((time) => people.forEach((q) => { q.g.position.y = 0.1 + Math.max(0, Math.sin(time * 1.6 + q.phase)) * 0.04; }));
+    updaters.push((time, dt) => {
+      dt = Math.min(dt, 0.1);
+      for (const w of walkers) {
+        const p = w.g.position;
+        if (w.wait > 0) { w.wait -= dt; p.y = 0.1 + Math.max(0, Math.sin(time * 1.6 + w.phase)) * 0.03; continue; } // stops to look at the stalls
+        const dx = w.tx - p.x, dz = w.tz - p.z, d = Math.hypot(dx, dz);
+        if (d < 0.3 || w.stuck > 1.5) { [w.tx, w.tz] = pickSpot(); w.wait = 1.5 + rnd() * 4; w.stuck = 0; continue; }
+        const step = w.speed * dt, bx = p.x, bz = p.z;
+        p.x += (dx / d) * step; p.z += (dz / d) * step;
+        for (const [ox, oz, or] of LOCAL_OBSTACLES) { // slide round the stalls, trees and houses
+          const ex = p.x - ox, ez = p.z - oz, ed = Math.hypot(ex, ez), rr = or + 0.5;
+          if (ed < rr) { const m = rr / (ed || 1); p.x = ox + ex * m; p.z = oz + ez * m; }
+        }
+        w.stuck = Math.hypot(p.x - bx, p.z - bz) < step * 0.3 ? w.stuck + dt : 0;
+        const want = Math.atan2(dx, dz), diff = Math.atan2(Math.sin(want - w.g.rotation.y), Math.cos(want - w.g.rotation.y));
+        w.g.rotation.y += diff * Math.min(1, dt * 8);
+        p.y = 0.1 + Math.abs(Math.sin(time * 7 + w.phase)) * 0.05;
+      }
+    });
   }
 
   /* ---------- Per-frame ---------- */

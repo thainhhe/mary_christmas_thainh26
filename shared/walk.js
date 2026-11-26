@@ -4,15 +4,15 @@
 // The walkable area is the union of
 //   1. the plaza + meadow: a disc of WALK_RADIUS around the tree,
 //   2. the "Broadway" avenue: a corridor leaving the plaza towards the south-west,
-//   3. the Christmas market: a disc at the end of that avenue.
+//   3. the Christmas market: a big square (disc of SQUARE.radius) at the end of that avenue.
 
 export const WALK_RADIUS = 32; // the plaza + meadow, up to the main street
 
 const AVENUE_ANGLE = (3 * Math.PI) / 4;                  // south-west (behind-left of the default camera); one of the 8 avenues in roads.js (x = cos a, z = sin a)
-export const AVENUE = { x: Math.cos(AVENUE_ANGLE), z: Math.sin(AVENUE_ANGLE), r0: 28, r1: 52, halfWidth: 2.4 };
+export const AVENUE = { x: Math.cos(AVENUE_ANGLE), z: Math.sin(AVENUE_ANGLE), r0: 28, r1: 63, halfWidth: 2.4 };
 export const SQUARE = {
-  x: AVENUE.x * AVENUE.r1, z: AVENUE.z * AVENUE.r1, // centre of the Christmas market (about 52 units from the tree)
-  radius: 11.2,                                      // walkable disc
+  x: AVENUE.x * AVENUE.r1, z: AVENUE.z * AVENUE.r1, // centre of the Christmas market (63 units from the tree; its gate is still ~42.6 out)
+  radius: 22,                                        // walkable disc
 };
 
 const set = (out, x, z) => { out.x = x; out.z = z; return out; };

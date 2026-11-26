@@ -238,7 +238,7 @@ async function bodyJSON(req, res) {
 const lastPost = new Map();
 setInterval(() => { const cut = Date.now() - COOLDOWN_MS; for (const [k, v] of lastPost) if (v < cut) lastPost.delete(k); }, 60_000).unref();
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
 async function serveStatic(req, res, pathname) {
   if (!existsSync(DIST)) { res.writeHead(404); res.end('dist/ not built. Run: npm run build'); return; }
   let file = path.join(DIST, path.normalize(decodeURIComponent(pathname)));

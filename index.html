@@ -89,6 +89,8 @@
       <div class="row"><button type="button" id="fb-ask-go" class="primary sm" data-i18n="fb.ask.go"></button><button type="button" id="fb-ask-later" class="link" data-i18n="fb.ask.later"></button></div>
     </div>
 
+    <button id="play-btn" class="primary" hidden></button>
+    <button id="tarot-btn" class="primary" hidden></button>
     <div id="tip" class="tip" hidden></div>
     <div id="toast" class="toast glass" hidden></div>
 
@@ -123,6 +125,20 @@
     <dialog id="modal">
       <div class="mhead"><h2 id="modal-title"></h2><button type="button" id="modal-close" class="x" data-i18n-aria="close">×</button></div>
       <div id="modal-body"></div>
+    </dialog>
+
+    <dialog id="dlg-game" class="game">
+      <div class="mhead"><h2 id="g-title"></h2><button type="button" id="g-close" class="x" data-i18n-aria="close">×</button></div>
+      <div class="ghud"><b id="g-score"></b><b id="g-extra"></b><span id="g-best" class="dim"></span></div>
+      <div class="gwrap">
+        <canvas id="g-canvas" width="360" height="520"></canvas>
+        <div id="g-over" class="gover"></div>
+      </div>
+    </dialog>
+
+    <dialog id="dlg-tarot" class="tarot">
+      <div class="mhead"><h2 id="tr-title"></h2><button type="button" id="tr-close" class="x" data-i18n-aria="close">×</button></div>
+      <div id="tr-body"></div>
     </dialog>
 
     <canvas id="rec" hidden></canvas>
